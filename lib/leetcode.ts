@@ -110,6 +110,37 @@ export async function getContestHistory(username: string) {
   );
 }
 
+export async function getProblemList(skip = 0, limit = 100) {
+  return fetchLeetCode<{
+    questionList: {
+      total: number;
+      questions: {
+        questionFrontendId: string;
+        title: string;
+        titleSlug: string;
+        difficulty: string;
+        topicTags: { name: string }[];
+        isPaidOnly: boolean;
+      }[];
+    };
+  }>(
+    `query getProblemList($categorySlug: String, $limit: Int, $skip: Int, $filters: QuestionListFilterInput) {
+      questionList(categorySlug: $categorySlug, limit: $limit, skip: $skip, filters: $filters) {
+        total: totalNum
+        questions: data {
+          questionFrontendId
+          title
+          titleSlug
+          difficulty
+          topicTags { name }
+          isPaidOnly
+        }
+      }
+    }`,
+    { categorySlug: "", limit, skip, filters: {} }
+  );
+}
+
 export async function checkSubmission(username: string, slug: string) {
   return fetchLeetCode<{
     recentAcSubmissionList: { titleSlug: string }[];

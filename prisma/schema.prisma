@@ -94,16 +94,17 @@ model UserSolved {
 }
 
 model ContestSession {
-  id          String            @id @default(cuid())
-  userId      String
-  topics      String[]
-  difficulty  Difficulty?
-  quantity    Int
-  startedAt   DateTime          @default(now())
-  completedAt DateTime?
-  status      ContestStatus     @default(ACTIVE)
-  questions   ContestQuestion[]
-  user        User              @relation(fields: [userId], references: [id])
+  id              String            @id @default(cuid())
+  userId          String
+  topics          String[]
+  difficulty      Difficulty?
+  quantity        Int
+  durationMinutes Int               @default(90)
+  startedAt       DateTime          @default(now())
+  completedAt     DateTime?
+  status          ContestStatus     @default(ACTIVE)
+  questions       ContestQuestion[]
+  user            User              @relation(fields: [userId], references: [id])
 }
 
 model ContestQuestion {
