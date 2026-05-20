@@ -36,6 +36,39 @@ export default function SyncPanel({ currentUsername, syncedCount, lastSyncedAt }
   const [copied, setCopied] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const [backfillCookie, setBackfillCookie] = useState("");
+  const [backfillLoading, setBackfillLoading] = useState(false);
+  const [backfillMsg, setBackfillMsg] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
+  const [showBackfillHelp, setShowBackfillHelp] = useState(false);
+
+  async function handleBackfill() {
+    if (!backfillCookie.trim()) return;
+    setBackfillLoading(true);
+    setBackfillMsg(null);
+    try {
+      const res = await fetch("/api/leetcode/bootstrap", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ leetcodeSession: backfillCookie.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setBackfillMsg({ kind: "error", text: data.error ?? "Backfill failed." });
+      } else {
+        setBackfillMsg({
+          kind: "ok",
+          text: `Backfilled ${data.added} new problem${data.added !== 1 ? "s" : ""} (${data.totalSlugs} found on LeetCode).`,
+        });
+        setBackfillCookie("");
+        router.refresh();
+      }
+    } catch {
+      setBackfillMsg({ kind: "error", text: "Network error. Try again." });
+    } finally {
+      setBackfillLoading(false);
+    }
+  }
+
   const hasUsername = !!currentUsername;
 
   async function handleGenerate() {
@@ -152,6 +185,61 @@ export default function SyncPanel({ currentUsername, syncedCount, lastSyncedAt }
             className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors"
           >
             Sync Now
+          </button>
+        </div>
+
+        {/* Backfill card */}
+        <div className="rounded-2xl border border-[#1f1f1f] bg-[#111111] p-6">
+          <p className="text-xs text-[#737373] mb-1 font-medium uppercase tracking-wider">Full History Backfill</p>
+          <p className="text-xs text-[#4a4a4a] mb-3">
+            One-time import of your entire solved history. The cookie is used once and never stored.
+          </p>
+
+          <button
+            type="button"
+            onClick={() => setShowBackfillHelp((v) => !v)}
+            className="text-xs text-indigo-400 hover:text-indigo-300 mb-3"
+          >
+            {showBackfillHelp ? "Hide instructions" : "How do I get my LEETCODE_SESSION cookie?"}
+          </button>
+          {showBackfillHelp && (
+            <ol className="text-xs text-[#737373] space-y-1 mb-4 list-decimal pl-4">
+              <li>Open <a href="https://leetcode.com" target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:underline">leetcode.com</a> and make sure you&apos;re signed in.</li>
+              <li>Open DevTools (F12) → <code className="text-[#a3a3a3]">Application</code> → <code className="text-[#a3a3a3]">Cookies</code> → <code className="text-[#a3a3a3]">https://leetcode.com</code>.</li>
+              <li>Find <code className="text-[#a3a3a3]">LEETCODE_SESSION</code> and copy its value (long random string).</li>
+              <li>Paste it below and click Backfill.</li>
+            </ol>
+          )}
+
+          <textarea
+            value={backfillCookie}
+            onChange={(e) => setBackfillCookie(e.target.value)}
+            placeholder="Paste LEETCODE_SESSION cookie value here"
+            rows={3}
+            className="w-full px-3 py-2 rounded-xl bg-[#0d0d0d] border border-[#2f2f2f] text-white text-xs font-mono placeholder:text-[#4a4a4a] focus:outline-none focus:border-indigo-500 transition-colors resize-none"
+          />
+
+          {backfillMsg && (
+            <div
+              className={`mt-3 rounded-xl border px-4 py-2.5 ${
+                backfillMsg.kind === "ok"
+                  ? "border-green-500/20 bg-green-500/5"
+                  : "border-red-500/20 bg-red-500/5"
+              }`}
+            >
+              <p className={`text-xs ${backfillMsg.kind === "ok" ? "text-green-400" : "text-red-400"}`}>
+                {backfillMsg.text}
+              </p>
+            </div>
+          )}
+
+          <button
+            onClick={handleBackfill}
+            disabled={!backfillCookie.trim() || backfillLoading}
+            className="w-full mt-3 py-2.5 rounded-xl border border-[#2f2f2f] hover:border-indigo-500 text-sm text-[#a3a3a3] hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+          >
+            {backfillLoading && <span className="w-3.5 h-3.5 border border-[#737373] border-t-white rounded-full animate-spin" />}
+            {backfillLoading ? "Backfilling…" : "Backfill"}
           </button>
         </div>
       </div>

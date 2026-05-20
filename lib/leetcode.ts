@@ -1,12 +1,18 @@
 const LEETCODE_GRAPHQL_URL = "https://leetcode.com/graphql";
 
 async function fetchLeetCode<T>(query: string, variables: Record<string, unknown> = {}): Promise<T> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "Referer": "https://leetcode.com",
+  };
+  if (process.env.LEETCODE_SESSION) {
+    const csrfToken = process.env.LEETCODE_CSRFTOKEN ?? "";
+    headers["Cookie"] = `LEETCODE_SESSION=${process.env.LEETCODE_SESSION}; csrftoken=${csrfToken}`;
+    if (csrfToken) headers["x-csrftoken"] = csrfToken;
+  }
   const res = await fetch(LEETCODE_GRAPHQL_URL, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Referer": "https://leetcode.com",
-    },
+    headers,
     body: JSON.stringify({ query, variables }),
   });
 
@@ -66,12 +72,16 @@ export async function getRecentSubmissions(username: string, limit = 20) {
 export async function getQuestionDetail(slug: string) {
   return fetchLeetCode<{
     question: {
+      questionId: string;
+      title: string;
       difficulty: string;
       topicTags: { name: string }[];
     };
   }>(
     `query getQuestionDetail($titleSlug: String!) {
       question(titleSlug: $titleSlug) {
+        questionId
+        title
         difficulty
         topicTags { name }
       }
@@ -110,6 +120,55 @@ export async function getContestHistory(username: string) {
   );
 }
 
+export async function getContestRankingHistory(username: string) {
+  return fetchLeetCode<{
+    userContestRankingHistory: {
+      attended: boolean;
+      problemsSolved: number;
+      totalProblems: number;
+      contest: { title: string; startTime: number };
+    }[];
+  }>(
+    `query getContestRankingHistory($username: String!) {
+      userContestRankingHistory(username: $username) {
+        attended
+        problemsSolved
+        totalProblems
+        contest { title startTime }
+      }
+    }`,
+    { username }
+  );
+}
+
+export async function fetchAllSolvedSlugs(leetcodeSession: string): Promise<string[]> {
+  const res = await fetch(LEETCODE_GRAPHQL_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Referer: "https://leetcode.com",
+      Cookie: `LEETCODE_SESSION=${leetcodeSession}`,
+    },
+    body: JSON.stringify({
+      query: `query userProgressQuestionList($filters: UserProgressQuestionListInput) {
+        userProgressQuestionList(filters: $filters) {
+          totalNum
+          questions { titleSlug questionStatus }
+        }
+      }`,
+      variables: { filters: { skip: 0, limit: 10000 } },
+    }),
+  });
+  if (!res.ok) throw new Error(`LeetCode API error: ${res.status}`);
+  const json = await res.json();
+  if (json.errors) throw new Error(json.errors[0].message);
+  const list = json.data?.userProgressQuestionList;
+  if (!list) throw new Error("Session expired or invalid. Get a fresh LEETCODE_SESSION cookie.");
+  return (list.questions as { titleSlug: string; questionStatus: string }[])
+    .filter((q) => q.questionStatus === "SOLVED")
+    .map((q) => q.titleSlug);
+}
+
 export async function getProblemList(skip = 0, limit = 100) {
   return fetchLeetCode<{
     questionList: {
@@ -139,6 +198,34 @@ export async function getProblemList(skip = 0, limit = 100) {
     }`,
     { categorySlug: "", limit, skip, filters: {} }
   );
+}
+
+export async function getContestDetails(titleSlug: string) {
+  const data = await fetchLeetCode<{
+    contest: {
+      title: string;
+      startTime: number;
+      questions: { title: string; titleSlug: string; questionId: string }[];
+    } | null;
+  }>(
+    `query getContest($titleSlug: String!) {
+      contest(titleSlug: $titleSlug) {
+        title
+        startTime
+        questions { title titleSlug questionId }
+      }
+    }`,
+    { titleSlug }
+  );
+  if (!data.contest) throw new Error("Contest not found");
+  return {
+    contest: { title: data.contest.title, startTime: data.contest.startTime },
+    questions: data.contest.questions.map((q) => ({
+      title: q.title,
+      title_slug: q.titleSlug,
+      question_id: q.questionId,
+    })),
+  };
 }
 
 export async function checkSubmission(username: string, slug: string) {

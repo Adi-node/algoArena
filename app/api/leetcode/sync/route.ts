@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
 
   let submissions;
   try {
-    const data = await getRecentSubmissions(user.leetcodeUsername, 50);
+    const data = await getRecentSubmissions(user.leetcodeUsername, 20);
     submissions = data.recentAcSubmissionList;
   } catch {
     return NextResponse.json({ error: "Could not fetch submissions from LeetCode." }, { status: 502 });

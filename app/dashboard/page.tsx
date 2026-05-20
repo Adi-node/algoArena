@@ -8,12 +8,13 @@ export default async function DashboardPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/api/auth/signin");
 
-  const [user, totalSolved] = await Promise.all([
+  const [user, totalSolved, upsolveCount] = await Promise.all([
     prisma.user.findUnique({
       where: { id: session.user.id },
       select: { leetcodeUsername: true, name: true },
     }),
     prisma.userSolved.count({ where: { userId: session.user.id } }),
+    prisma.upsolvingItem.count({ where: { userId: session.user.id, dismissed: false } }),
   ]);
 
   let contestRating: number | null = null;
@@ -45,8 +46,8 @@ export default async function DashboardPage() {
     },
     {
       label: "Upsolve Queue",
-      value: "0",
-      sub: "problems to review",
+      value: String(upsolveCount),
+      sub: upsolveCount > 0 ? "problems to review" : "Refresh to populate",
       color: "text-yellow-400",
       href: "/dashboard/upsolving",
     },
