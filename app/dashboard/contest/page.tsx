@@ -3,6 +3,7 @@ import Link from "next/link";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import ContestForm from "./ContestForm";
+import PastContestsButton from "./PastContestsButton";
 
 export default async function ContestPage() {
   const session = await auth();
@@ -58,13 +59,45 @@ export default async function ContestPage() {
     );
   }
 
+  const pastContests = await prisma.contestSession.findMany({
+    where: {
+      userId: session.user.id,
+      status: { in: ["COMPLETED", "ABANDONED"] },
+    },
+    select: {
+      id: true,
+      topics: true,
+      difficulty: true,
+      durationMinutes: true,
+      startedAt: true,
+      completedAt: true,
+      status: true,
+      questions: { select: { solved: true } },
+    },
+    orderBy: { completedAt: "desc" },
+  });
+
+  const serializedPast = pastContests.map((c) => ({
+    id: c.id,
+    topics: c.topics,
+    difficulty: c.difficulty,
+    durationMinutes: c.durationMinutes,
+    status: c.status as "COMPLETED" | "ABANDONED",
+    when: (c.completedAt ?? c.startedAt).toISOString(),
+    solved: c.questions.filter((q) => q.solved).length,
+    total: c.questions.length,
+  }));
+
   return (
     <div className="p-8 max-w-xl">
-      <div className="mb-8">
-        <h1 className="text-xl font-semibold text-white mb-1">Custom Contest</h1>
-        <p className="text-sm text-[#737373]">
-          Pick topics, difficulty, and duration — we&apos;ll find unsolved problems for you.
-        </p>
+      <div className="mb-8 flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-xl font-semibold text-white mb-1">Custom Contest</h1>
+          <p className="text-sm text-[#737373]">
+            Pick topics, difficulty, and duration — we&apos;ll find unsolved problems for you.
+          </p>
+        </div>
+        <PastContestsButton contests={serializedPast} />
       </div>
       <ContestForm availableTags={availableTags} />
     </div>
