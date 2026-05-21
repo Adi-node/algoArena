@@ -14,7 +14,7 @@ export async function POST(
 
   const contest = await prisma.contestSession.findUnique({
     where: { id },
-    select: { userId: true, status: true },
+    select: { userId: true, status: true, startedAt: true, durationMinutes: true },
   });
   if (!contest || contest.userId !== session.user.id) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -23,10 +23,15 @@ export async function POST(
     return NextResponse.json({ error: "Contest already ended" }, { status: 400 });
   }
 
+  const elapsedMs = Date.now() - contest.startedAt.getTime();
+  const durationMs = contest.durationMinutes * 60_000;
+  const newStatus: "COMPLETED" | "ABANDONED" =
+    elapsedMs >= durationMs ? "COMPLETED" : "ABANDONED";
+
   await prisma.contestSession.update({
     where: { id },
-    data: { status: "ABANDONED", completedAt: new Date() },
+    data: { status: newStatus, completedAt: new Date() },
   });
 
-  return NextResponse.json({ status: "ABANDONED" });
+  return NextResponse.json({ status: newStatus });
 }

@@ -80,34 +80,69 @@ export default function ContestRoom({
   }
 
   async function handleEnd() {
-    if (!confirm("End this contest? It will be marked as abandoned.")) return;
+    if (!confirm("Terminate this contest? Progress so far will be saved.")) return;
     setEnding(true);
     const res = await fetch(`/api/contest/${contestId}/end`, { method: "POST" });
     setEnding(false);
-    if (res.ok) setCurrentStatus("ABANDONED");
+    if (res.ok) {
+      const data = await res.json();
+      setCurrentStatus(data.status);
+    }
   }
+
+  // Auto-fire end route once when the timer hits 0 so the contest transitions to COMPLETED
+  // without requiring a user click. Server returns COMPLETED because elapsed >= duration.
+  useEffect(() => {
+    if (currentStatus !== "ACTIVE" || timeLeft > 0) return;
+    let cancelled = false;
+    (async () => {
+      const res = await fetch(`/api/contest/${contestId}/end`, { method: "POST" });
+      if (cancelled || !res.ok) return;
+      const data = await res.json();
+      setCurrentStatus(data.status);
+    })();
+    return () => { cancelled = true; };
+  }, [timeLeft, currentStatus, contestId]);
 
   const solvedCount = questions.filter((q) => q.solved).length;
   const isActive = currentStatus === "ACTIVE";
   const isExpired = timeLeft === 0 && isActive;
 
-  // ── Completed ────────────────────────────────────────────────────────────────
+  // ── Completed (AK or partial) ────────────────────────────────────────────────
   if (currentStatus === "COMPLETED") {
+    const isAK = solvedCount === questions.length;
     return (
       <div className="space-y-6">
-        <div className="rounded-2xl border border-green-500/20 bg-green-500/5 p-6 flex items-center gap-4">
-          <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center flex-shrink-0">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2">
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
+        {isAK ? (
+          <div className="rounded-2xl border border-yellow-500/30 bg-yellow-500/5 p-6 flex items-center gap-4">
+            <div className="w-10 h-10 rounded-full bg-yellow-500/10 flex items-center justify-center flex-shrink-0">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#facc15" strokeWidth="2">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-yellow-300">AK — All Solved!</p>
+              <p className="text-xs text-[#737373]">
+                You solved all {questions.length} problem{questions.length !== 1 ? "s" : ""}. Perfect run.
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="text-sm font-semibold text-white">Contest Complete!</p>
-            <p className="text-xs text-[#737373]">
-              You solved all {questions.length} problem{questions.length !== 1 ? "s" : ""}.
-            </p>
+        ) : (
+          <div className="rounded-2xl border border-indigo-500/20 bg-indigo-500/5 p-6 flex items-center gap-4">
+            <div className="w-10 h-10 rounded-full bg-indigo-500/10 flex items-center justify-center flex-shrink-0">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#818cf8" strokeWidth="2">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-white">Contest Completed</p>
+              <p className="text-xs text-[#737373]">
+                Time&apos;s up — you solved {solvedCount} of {questions.length}.
+              </p>
+            </div>
           </div>
-        </div>
+        )}
         <QuestionList questions={questions} />
         <Link
           href="/dashboard/contest"
@@ -119,15 +154,22 @@ export default function ContestRoom({
     );
   }
 
-  // ── Abandoned ─────────────────────────────────────────────────────────────────
+  // ── Terminated (DB status: ABANDONED) ────────────────────────────────────────
   if (currentStatus === "ABANDONED") {
     return (
       <div className="space-y-6">
-        <div className="rounded-2xl border border-[#2f2f2f] bg-[#111111] p-6">
-          <p className="text-sm font-semibold text-[#737373] mb-1">Contest ended</p>
-          <p className="text-xs text-[#4a4a4a]">
-            {solvedCount} of {questions.length} solved
-          </p>
+        <div className="rounded-2xl border border-red-500/20 bg-red-500/5 p-6 flex items-center gap-4">
+          <div className="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center flex-shrink-0">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="2">
+              <rect x="6" y="6" width="12" height="12" rx="1" />
+            </svg>
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-white">Contest Terminated</p>
+            <p className="text-xs text-[#737373]">
+              {solvedCount} of {questions.length} solved before stop.
+            </p>
+          </div>
         </div>
         <QuestionList questions={questions} />
         <Link
@@ -189,7 +231,7 @@ export default function ContestRoom({
           disabled={ending}
           className="flex-1 py-2.5 rounded-xl border border-[#2f2f2f] text-[#737373] hover:text-white disabled:opacity-40 text-sm transition-colors"
         >
-          {ending ? "Ending…" : "End Contest"}
+          {ending ? "Stopping…" : "Terminate"}
         </button>
         <button
           onClick={handleSync}
