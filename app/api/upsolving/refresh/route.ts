@@ -5,7 +5,15 @@ import {
   getContestRankingHistory,
   getContestDetails,
   getRecentSubmissions,
+  getQuestionDetail,
 } from "@/lib/leetcode";
+import type { Difficulty } from "@/app/generated/prisma/client";
+
+function mapDifficulty(d: string | undefined): Difficulty {
+  if (d === "Easy") return "EASY";
+  if (d === "Hard") return "HARD";
+  return "MEDIUM";
+}
 
 function contestTitleToSlug(title: string) {
   return title.toLowerCase().replace(/\s+/g, "-");
@@ -88,11 +96,22 @@ export async function POST() {
       if (!question) {
         const leetcodeId = parseInt(q.question_id);
         if (isNaN(leetcodeId)) continue;
+
+        let difficulty: Difficulty = "MEDIUM";
+        let tags: string[] = [];
+        try {
+          const detail = await getQuestionDetail(q.title_slug);
+          difficulty = mapDifficulty(detail.question.difficulty);
+          tags = detail.question.topicTags.map((t) => t.name);
+        } catch {
+          // Detail fetch failed — fall through and create with defaults; will be refined on next sync.
+        }
+
         try {
           question = await prisma.question.upsert({
             where: { leetcodeId },
-            update: { slug: q.title_slug, title: q.title },
-            create: { leetcodeId, slug: q.title_slug, title: q.title, difficulty: "MEDIUM", tags: [] },
+            update: { slug: q.title_slug, title: q.title, difficulty, tags },
+            create: { leetcodeId, slug: q.title_slug, title: q.title, difficulty, tags },
           });
         } catch {
           continue;

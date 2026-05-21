@@ -34,6 +34,7 @@ model User {
   solvedQuestions  UserSolved[]
   contestSessions  ContestSession[]
   upsolvingItems   UpsolvingItem[]
+  weakTopicAnalyses WeakTopicAnalysis[]
 }
 
 model Account {
@@ -130,4 +131,16 @@ model ContestQuestion {
   solved           Boolean        @default(false)
   contestSession   ContestSession @relation(fields: [contestSessionId], references: [id])
   question         Question       @relation(fields: [questionId], references: [id])
+}
+
+model WeakTopicAnalysis {
+  id         String   @id @default(cuid())
+  userId     String
+  createdAt  DateTime @default(now())
+  topTags    String[]
+  summary    String   @db.Text
+  scoresJson Json
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
 }

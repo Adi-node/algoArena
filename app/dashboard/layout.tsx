@@ -72,10 +72,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-[#e5e5e5] flex">
       {/* Sidebar */}
-      <aside className="fixed top-0 left-0 h-screen w-[240px] border-r border-[#1f1f1f] bg-[#0d0d0d] flex flex-col z-40">
+      <aside className="fixed top-0 left-0 h-screen w-60 border-r border-[#1f1f1f] bg-[#0d0d0d] flex flex-col z-40">
         {/* Logo */}
         <div className="px-4 py-4 border-b border-[#1f1f1f] flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-indigo-500 flex items-center justify-center flex-shrink-0">
+          <div className="w-7 h-7 rounded-lg bg-indigo-500 flex items-center justify-center shrink-0">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
               <path d="M3 13L8 3L13 13" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
               <path d="M5 9H11" stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
@@ -124,7 +124,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </aside>
 
       {/* Main content */}
-      <main className="ml-[240px] flex-1 min-h-screen">
+      <main className="ml-60 flex-1 min-h-screen">
         {children}
       </main>
     </div>
