@@ -29,10 +29,22 @@ export function isCategory(v: string): v is PracticeCategory {
 
 const DATA_DIR = path.join(process.cwd(), "data");
 
+// Per-category memo: each JSON file is read at most once per server lifetime.
+const categoryCache = new Map<PracticeCategory, Promise<PracticeQuestion[]>>();
+
 export async function getQuestionsByCategory(category: PracticeCategory): Promise<PracticeQuestion[]> {
-  const file = path.join(DATA_DIR, `${category}.json`);
-  const raw = await fs.readFile(file, "utf-8");
-  return JSON.parse(raw) as PracticeQuestion[];
+  const cached = categoryCache.get(category);
+  if (cached) return cached;
+  const promise = (async () => {
+    const file = path.join(DATA_DIR, `${category}.json`);
+    const raw = await fs.readFile(file, "utf-8");
+    return JSON.parse(raw) as PracticeQuestion[];
+  })().catch((e) => {
+    categoryCache.delete(category); // allow retry on next call
+    throw e;
+  });
+  categoryCache.set(category, promise);
+  return promise;
 }
 
 export async function getQuestion(category: PracticeCategory, id: string): Promise<PracticeQuestion | null> {

@@ -5,10 +5,28 @@ import { getQuestion, isCategory } from "@/lib/practice";
 
 const PISTON_URL = process.env.PISTON_URL ?? "http://localhost:2000";
 const PASS_TOKEN = "__TEST_PASSED__";
+const RATE_WINDOW_MS = 10_000;
+const RATE_MAX = 5;
 
 interface PistonResponse {
   run?: { stdout?: string; stderr?: string; output?: string; code?: number };
   message?: string;
+}
+
+// In-memory sliding-window rate gate. Atomic vs. the DB-count approach because
+// the check-and-record are synchronous (no awaits between them).
+const recentRuns = new Map<string, number[]>();
+function tryConsumeRunSlot(userId: string): boolean {
+  const now = Date.now();
+  const cutoff = now - RATE_WINDOW_MS;
+  const arr = (recentRuns.get(userId) ?? []).filter((t) => t > cutoff);
+  if (arr.length >= RATE_MAX) {
+    recentRuns.set(userId, arr);
+    return false;
+  }
+  arr.push(now);
+  recentRuns.set(userId, arr);
+  return true;
 }
 
 export async function POST(req: NextRequest) {
@@ -37,6 +55,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Question not found" }, { status: 404 });
   }
 
+  // Per-user rate gate: max RATE_MAX attempts within RATE_WINDOW_MS (atomic).
+  if (!tryConsumeRunSlot(session.user.id)) {
+    return NextResponse.json(
+      { error: "Too many runs. Wait a few seconds before trying again." },
+      { status: 429 }
+    );
+  }
+
   const finalCode = code + "\n" + question.hiddenTestCode;
 
   let piston: PistonResponse;
@@ -48,7 +74,11 @@ export async function POST(req: NextRequest) {
         language: "javascript",
         version: "20.11.1",
         files: [{ name: "main.js", content: finalCode }],
+        run_timeout: 5000,
+        compile_timeout: 5000,
+        run_memory_limit: 128_000_000,
       }),
+      signal: AbortSignal.timeout(15_000),
     });
     if (!res.ok) {
       const text = await res.text();
@@ -59,10 +89,15 @@ export async function POST(req: NextRequest) {
     }
     piston = (await res.json()) as PistonResponse;
   } catch (e) {
+    const isTimeout = e instanceof Error && e.name === "TimeoutError";
     const msg = e instanceof Error ? e.message : "unknown";
     return NextResponse.json(
-      { error: `Piston unreachable at ${PISTON_URL}: ${msg}` },
-      { status: 502 }
+      {
+        error: isTimeout
+          ? "Code execution timed out (15s)."
+          : `Piston unreachable at ${PISTON_URL}: ${msg}`,
+      },
+      { status: isTimeout ? 504 : 502 }
     );
   }
 

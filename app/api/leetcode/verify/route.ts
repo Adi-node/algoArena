@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { checkSubmission } from "@/lib/leetcode";
+import { getRecentSubmissions } from "@/lib/leetcode";
 
 export async function POST(req: NextRequest) {
   const session = await auth();
@@ -22,6 +22,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const solved = await checkSubmission(user.leetcodeUsername, slug);
+  const data = await getRecentSubmissions(user.leetcodeUsername, 50);
+  const solved = data.recentAcSubmissionList.some((s) => s.titleSlug === slug);
   return NextResponse.json({ slug, solved });
 }

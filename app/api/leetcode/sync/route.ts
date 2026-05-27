@@ -11,7 +11,7 @@ function mapDifficulty(d: string): Difficulty {
   return "MEDIUM";
 }
 
-export async function POST(req: NextRequest) {
+export async function POST(_req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -33,44 +33,48 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Could not fetch submissions from LeetCode." }, { status: 502 });
   }
 
-  let synced = 0;
-  for (const sub of submissions) {
-    let difficulty: Difficulty = "MEDIUM";
-    let tags: string[] = [];
+  const detailResults = await Promise.all(
+    submissions.map((sub) =>
+      getQuestionDetail(sub.titleSlug)
+        .then((d) => ({
+          difficulty: mapDifficulty(d.question.difficulty),
+          tags: d.question.topicTags.map((t) => t.name),
+        }))
+        .catch(() => ({ difficulty: "MEDIUM" as Difficulty, tags: [] as string[] }))
+    )
+  );
 
-    try {
-      const detail = await getQuestionDetail(sub.titleSlug);
-      difficulty = mapDifficulty(detail.question.difficulty);
-      tags = detail.question.topicTags.map((t) => t.name);
-    } catch {
-      // Non-fatal: keep defaults if detail fetch fails
-    }
+  const questions = await prisma.$transaction(
+    submissions.map((sub, i) =>
+      prisma.question.upsert({
+        where: { slug: sub.titleSlug },
+        update: { difficulty: detailResults[i].difficulty, tags: detailResults[i].tags },
+        create: {
+          leetcodeId: parseInt(sub.id),
+          slug: sub.titleSlug,
+          title: sub.title,
+          difficulty: detailResults[i].difficulty,
+          tags: detailResults[i].tags,
+        },
+      })
+    )
+  );
 
-    const question = await prisma.question.upsert({
-      where: { slug: sub.titleSlug },
-      update: { difficulty, tags },
-      create: {
-        leetcodeId: parseInt(sub.id),
-        slug: sub.titleSlug,
-        title: sub.title,
-        difficulty,
-        tags,
-      },
-    });
+  await prisma.$transaction(
+    submissions.map((sub, i) =>
+      prisma.userSolved.upsert({
+        where: { userId_questionId: { userId: user.id, questionId: questions[i].id } },
+        update: { solvedAt: new Date(parseInt(sub.timestamp) * 1000), language: sub.lang },
+        create: {
+          userId: user.id,
+          questionId: questions[i].id,
+          solvedAt: new Date(parseInt(sub.timestamp) * 1000),
+          language: sub.lang,
+        },
+      })
+    )
+  );
 
-    await prisma.userSolved.upsert({
-      where: { userId_questionId: { userId: user.id, questionId: question.id } },
-      update: { solvedAt: new Date(parseInt(sub.timestamp) * 1000), language: sub.lang },
-      create: {
-        userId: user.id,
-        questionId: question.id,
-        solvedAt: new Date(parseInt(sub.timestamp) * 1000),
-        language: sub.lang,
-      },
-    });
-    synced++;
-  }
-
-  revalidateTag(leetcodeUserTag(user.leetcodeUsername), "max");
-  return NextResponse.json({ synced });
+  revalidateTag(leetcodeUserTag(session.user.id), "max");
+  return NextResponse.json({ synced: submissions.length });
 }

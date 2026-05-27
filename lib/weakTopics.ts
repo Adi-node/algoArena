@@ -120,6 +120,9 @@ export async function computeWeakTopics(
   ]);
 
   const topics: Record<string, TopicScore> = {};
+  // Per-topic slug-set to dedupe failure evidence — the same multi-tagged problem
+  // would otherwise appear N times (once per matching tag) in the LLM prompt.
+  const seenFailuresByTopic: Record<string, Set<string>> = {};
   for (const t of WHITELIST) {
     topics[t] = {
       topic: t,
@@ -131,6 +134,7 @@ export async function computeWeakTopics(
       reasons: [],
       evidence: { failures: [], solvedCount: 0 },
     };
+    seenFailuresByTopic[t] = new Set();
   }
 
   for (const s of solved) {
@@ -157,7 +161,11 @@ export async function computeWeakTopics(
       if (!bucket) continue;
       bucket.struggleScore += w;
       bucket.failedCount += 1;
-      bucket.evidence.failures.push({ slug, title, difficulty, source, date: iso });
+      const seen = seenFailuresByTopic[tag];
+      if (!seen.has(slug)) {
+        seen.add(slug);
+        bucket.evidence.failures.push({ slug, title, difficulty, source, date: iso });
+      }
     }
   };
 

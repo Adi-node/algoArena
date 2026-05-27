@@ -3,8 +3,13 @@ import { unstable_cache } from "next/cache";
 const LEETCODE_GRAPHQL_URL = "https://leetcode.com/graphql";
 const LEETCODE_FETCH_TIMEOUT_MS = 8000;
 
-export function leetcodeUserTag(username: string) {
-  return `leetcode:user:${username}`;
+/**
+ * Cache tag scoped to a single Algo Arena user. Used by `getContestHistory` /
+ * `getUserCalendar` so two AA users that happen to share the same LeetCode
+ * handle don't collide on the cache (and so revalidation is per-owner).
+ */
+export function leetcodeUserTag(userId: string) {
+  return `leetcode:user:${userId}`;
 }
 
 async function fetchLeetCode<T>(query: string, variables: Record<string, unknown> = {}): Promise<T> {
@@ -128,11 +133,11 @@ function _getContestHistory(username: string) {
   );
 }
 
-export function getContestHistory(username: string): Promise<ContestHistory> {
+export function getContestHistory(username: string, ownerUserId: string): Promise<ContestHistory> {
   return unstable_cache(
     () => _getContestHistory(username),
-    ["leetcode:contestHistory", username],
-    { revalidate: 300, tags: [leetcodeUserTag(username)] },
+    ["leetcode:contestHistory", ownerUserId, username],
+    { revalidate: 300, tags: [leetcodeUserTag(ownerUserId)] },
   )();
 }
 
@@ -160,11 +165,11 @@ function _getUserCalendar(username: string, year?: number) {
   );
 }
 
-export function getUserCalendar(username: string, year?: number): Promise<UserCalendar> {
+export function getUserCalendar(username: string, ownerUserId: string, year?: number): Promise<UserCalendar> {
   return unstable_cache(
     () => _getUserCalendar(username, year),
-    ["leetcode:userCalendar", username, String(year ?? "")],
-    { revalidate: 300, tags: [leetcodeUserTag(username)] },
+    ["leetcode:userCalendar", ownerUserId, username, String(year ?? "")],
+    { revalidate: 300, tags: [leetcodeUserTag(ownerUserId)] },
   )();
 }
 
@@ -206,6 +211,7 @@ export async function fetchAllSolvedSlugs(leetcodeSession: string): Promise<stri
       }`,
       variables: { filters: { skip: 0, limit: 10000 } },
     }),
+    signal: AbortSignal.timeout(20_000),
   });
   if (!res.ok) throw new Error(`LeetCode API error: ${res.status}`);
   const json = await res.json();
@@ -276,17 +282,12 @@ export async function getContestDetails(titleSlug: string) {
   };
 }
 
+/**
+ * @deprecated Issues a full recentAcSubmissionList GraphQL request for a single
+ * slug lookup. When checking multiple slugs, call `getRecentSubmissions` once
+ * and build a `Set<string>` of `titleSlug` values locally.
+ */
 export async function checkSubmission(username: string, slug: string) {
-  return fetchLeetCode<{
-    recentAcSubmissionList: { titleSlug: string }[];
-  }>(
-    `query checkSubmission($username: String!) {
-      recentAcSubmissionList(username: $username, limit: 50) {
-        titleSlug
-      }
-    }`,
-    { username }
-  ).then((data) =>
-    data.recentAcSubmissionList.some((s) => s.titleSlug === slug)
-  );
+  const data = await getRecentSubmissions(username, 50);
+  return data.recentAcSubmissionList.some((s) => s.titleSlug === slug);
 }

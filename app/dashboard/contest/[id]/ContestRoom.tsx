@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { Icon } from "../../../_ui/icons";
 
@@ -57,51 +57,112 @@ export default function ContestRoom({
   const [syncError, setSyncError] = useState("");
   const [ending, setEnding] = useState(false);
 
+  const syncAbortRef = useRef<AbortController | null>(null);
+  const endAbortRef = useRef<AbortController | null>(null);
+  const endingRef = useRef(false);
+
+  useEffect(() => () => {
+    syncAbortRef.current?.abort();
+    endAbortRef.current?.abort();
+  }, []);
+
   useEffect(() => {
     if (currentStatus !== "ACTIVE") return;
-    const interval = setInterval(() => {
+    const tick = () => {
       const endAt = new Date(startedAt).getTime() + durationMinutes * 60_000;
       setTimeLeft(Math.max(0, Math.floor((endAt - Date.now()) / 1000)));
-    }, 1000);
-    return () => clearInterval(interval);
+    };
+    tick();
+    const interval = setInterval(tick, 1000);
+    const onVisible = () => { if (document.visibilityState === "visible") tick(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [startedAt, durationMinutes, currentStatus]);
 
   async function handleSync() {
+    if (syncAbortRef.current) return;
+    const ac = new AbortController();
+    syncAbortRef.current = ac;
     setSyncing(true);
     setSyncError("");
-    const res = await fetch(`/api/contest/${contestId}/sync`, { method: "POST" });
-    const data = await res.json();
-    setSyncing(false);
-    if (!res.ok) {
-      setSyncError(data.error ?? "Sync failed.");
-      return;
+    try {
+      const res = await fetch(`/api/contest/${contestId}/sync`, {
+        method: "POST",
+        signal: ac.signal,
+      });
+      const data = await res.json();
+      if (ac.signal.aborted) return;
+      if (!res.ok) {
+        setSyncError(data.error ?? "Sync failed.");
+        return;
+      }
+      setQuestions(data.questions);
+      setCurrentStatus(data.status);
+    } catch (e) {
+      if ((e as Error).name === "AbortError") return;
+      setSyncError("Network error. Try again.");
+    } finally {
+      if (syncAbortRef.current === ac) syncAbortRef.current = null;
+      setSyncing(false);
     }
-    setQuestions(data.questions);
-    setCurrentStatus(data.status);
   }
 
+  const postEnd = useCallback(async (ac: AbortController) => {
+    const res = await fetch(`/api/contest/${contestId}/end`, {
+      method: "POST",
+      signal: ac.signal,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (ac.signal.aborted) return null;
+    if (!res.ok && !data?.alreadyEnded) {
+      throw new Error(data?.error ?? `HTTP ${res.status}`);
+    }
+    return data?.status as "COMPLETED" | "ABANDONED" | undefined;
+  }, [contestId]);
+
   async function handleEnd() {
+    if (endingRef.current) return;
     if (!confirm("Terminate this contest? Progress so far will be saved.")) return;
+    endingRef.current = true;
+    const ac = new AbortController();
+    endAbortRef.current = ac;
     setEnding(true);
-    const res = await fetch(`/api/contest/${contestId}/end`, { method: "POST" });
-    setEnding(false);
-    if (res.ok) {
-      const data = await res.json();
-      setCurrentStatus(data.status);
+    setSyncError("");
+    try {
+      const status = await postEnd(ac);
+      if (status) setCurrentStatus(status);
+    } catch (e) {
+      if ((e as Error).name === "AbortError") return;
+      setSyncError("Couldn't terminate contest. Try again.");
+    } finally {
+      endingRef.current = false;
+      if (endAbortRef.current === ac) endAbortRef.current = null;
+      setEnding(false);
     }
   }
 
   useEffect(() => {
     if (currentStatus !== "ACTIVE" || timeLeft > 0) return;
-    let cancelled = false;
+    if (endingRef.current) return;
+    endingRef.current = true;
+    const ac = new AbortController();
+    endAbortRef.current = ac;
     (async () => {
-      const res = await fetch(`/api/contest/${contestId}/end`, { method: "POST" });
-      if (cancelled || !res.ok) return;
-      const data = await res.json();
-      setCurrentStatus(data.status);
+      try {
+        const status = await postEnd(ac);
+        if (status) setCurrentStatus(status);
+      } catch {
+        // auto-end failure is non-fatal: leave room ACTIVE, user can hit Terminate
+      } finally {
+        endingRef.current = false;
+        if (endAbortRef.current === ac) endAbortRef.current = null;
+      }
     })();
-    return () => { cancelled = true; };
-  }, [timeLeft, currentStatus, contestId]);
+    return () => { ac.abort(); };
+  }, [timeLeft, currentStatus, postEnd]);
 
   const solvedCount = questions.filter((q) => q.solved).length;
   const isActive = currentStatus === "ACTIVE";

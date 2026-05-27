@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 const DURATIONS = [30, 60, 90, 120] as const;
@@ -23,6 +23,9 @@ export default function ContestForm({ availableTags }: Props) {
   const [durationMinutes, setDurationMinutes] = useState(90);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => () => abortRef.current?.abort(), []);
 
   function toggleTopic(tag: string) {
     setSelectedTopics((prev) =>
@@ -31,27 +34,43 @@ export default function ContestForm({ availableTags }: Props) {
   }
 
   async function handleSubmit() {
+    if (abortRef.current) return;
+    const ac = new AbortController();
+    abortRef.current = ac;
     setLoading(true);
     setError("");
 
-    const res = await fetch("/api/contest/create", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        topics: selectedTopics,
-        difficulty: difficulty || null,
-        quantity,
-        durationMinutes,
-      }),
-    });
-    const data = await res.json();
-    setLoading(false);
-
-    if (!res.ok) {
-      setError(data.error ?? "Something went wrong.");
-      return;
+    try {
+      const res = await fetch("/api/contest/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          topics: selectedTopics,
+          difficulty: difficulty || null,
+          quantity,
+          durationMinutes,
+        }),
+        signal: ac.signal,
+      });
+      const data = await res.json();
+      if (ac.signal.aborted) return;
+      // Race fallback: another tab already started a contest — jump to it.
+      if (res.status === 409 && data?.existingContestId) {
+        router.push(`/dashboard/contest/${data.existingContestId}`);
+        return;
+      }
+      if (!res.ok) {
+        setError(data.error ?? "Something went wrong.");
+        return;
+      }
+      router.push(`/dashboard/contest/${data.contestId}`);
+    } catch (e) {
+      if ((e as Error).name === "AbortError") return;
+      setError("Network error. Try again.");
+    } finally {
+      if (abortRef.current === ac) abortRef.current = null;
+      setLoading(false);
     }
-    router.push(`/dashboard/contest/${data.contestId}`);
   }
 
   return (

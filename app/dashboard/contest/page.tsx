@@ -5,6 +5,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import ContestForm from "./ContestForm";
 import PastContestsButton from "./PastContestsButton";
+import ActiveContestCard from "./ActiveContestCard";
 
 const getAvailableTags = unstable_cache(
   async () => {
@@ -21,7 +22,7 @@ export default async function ContestPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/api/auth/signin");
 
-  const [user, availableTags, pastContests] = await Promise.all([
+  const [user, availableTags, pastContests, active] = await Promise.all([
     prisma.user.findUnique({
       where: { id: session.user.id },
       select: { leetcodeUsername: true },
@@ -43,6 +44,19 @@ export default async function ContestPage() {
         questions: { select: { solved: true } },
       },
       orderBy: { completedAt: "desc" },
+      take: 50,
+    }),
+    prisma.contestSession.findFirst({
+      where: { userId: session.user.id, status: "ACTIVE" },
+      orderBy: { startedAt: "desc" },
+      select: {
+        id: true,
+        topics: true,
+        difficulty: true,
+        durationMinutes: true,
+        startedAt: true,
+        questions: { select: { solved: true } },
+      },
     }),
   ]);
 
@@ -99,6 +113,31 @@ export default async function ContestPage() {
     solved: c.questions.filter((q) => q.solved).length,
     total: c.questions.length,
   }));
+
+  if (active) {
+    return (
+      <>
+        <header className="aa-page-head">
+          <div className="row">
+            <div>
+              <h1>Custom contest</h1>
+              <p className="sub">You have a contest in progress. Resume it or discard to start a new one.</p>
+            </div>
+            <PastContestsButton contests={serializedPast} />
+          </div>
+        </header>
+        <ActiveContestCard
+          id={active.id}
+          topics={active.topics}
+          difficulty={active.difficulty}
+          durationMinutes={active.durationMinutes}
+          startedAtIso={active.startedAt.toISOString()}
+          solvedCount={active.questions.filter((q) => q.solved).length}
+          totalQuestions={active.questions.length}
+        />
+      </>
+    );
+  }
 
   return (
     <>

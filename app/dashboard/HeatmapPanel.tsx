@@ -1,8 +1,16 @@
 import { getUserCalendar } from "@/lib/leetcode";
 import HeatmapCalendar from "./HeatmapCalendar";
 
-export default async function HeatmapPanel({ username, year }: { username: string; year: number }) {
-  const calRes = await getUserCalendar(username, year).catch((e) => {
+export default async function HeatmapPanel({
+  username,
+  ownerUserId,
+  year,
+}: {
+  username: string;
+  ownerUserId: string;
+  year: number;
+}) {
+  const calRes = await getUserCalendar(username, ownerUserId, year).catch((e) => {
     console.error("[dashboard] getUserCalendar failed:", e);
     return null;
   });

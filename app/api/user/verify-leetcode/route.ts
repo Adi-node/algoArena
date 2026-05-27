@@ -64,10 +64,19 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    await prisma.user.update({
-      where: { id: session.user.id },
+    // Atomic clear: only succeed if the token we verified is still the current one.
+    // Prevents two concurrent verify calls from both passing the check and racing.
+    const cleared = await prisma.user.updateMany({
+      where: { id: session.user.id, leetcodeVerifyToken: user.leetcodeVerifyToken },
       data: { leetcodeUsername: username.trim(), leetcodeVerifyToken: null },
     });
+
+    if (cleared.count === 0) {
+      return NextResponse.json(
+        { verified: false, error: "Token was already used. Generate a new one." },
+        { status: 409 }
+      );
+    }
 
     return NextResponse.json({ verified: true });
   }

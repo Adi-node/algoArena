@@ -17,6 +17,6 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const data = await getContestHistory(user.leetcodeUsername);
+  const data = await getContestHistory(user.leetcodeUsername, session.user.id);
   return NextResponse.json(data);
 }

@@ -258,8 +258,11 @@ export async function POST(_req: NextRequest) {
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
         send("error", { message: msg });
+        // Yield a microtask so the consumer's reader.read() can pull the error
+        // frame before close() drops any unread bytes.
+        await new Promise((r) => setTimeout(r, 0));
       } finally {
-        controller.close();
+        try { controller.close(); } catch { /* already closed */ }
       }
     },
   });

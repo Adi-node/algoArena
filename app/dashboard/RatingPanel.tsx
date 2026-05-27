@@ -1,8 +1,14 @@
 import { getContestHistory } from "@/lib/leetcode";
 import RatingChart from "./RatingChart";
 
-export default async function RatingPanel({ username }: { username: string }) {
-  const history = await getContestHistory(username).catch((e) => {
+export default async function RatingPanel({
+  username,
+  ownerUserId,
+}: {
+  username: string;
+  ownerUserId: string;
+}) {
+  const history = await getContestHistory(username, ownerUserId).catch((e) => {
     console.error("[dashboard] getContestHistory failed:", e);
     return null;
   });

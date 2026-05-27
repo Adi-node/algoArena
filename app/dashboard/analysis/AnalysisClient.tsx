@@ -82,6 +82,8 @@ export default function AnalysisClient({ initialHistory }: Props) {
 
   const abortRef = useRef<AbortController | null>(null);
   const summaryRef = useRef("");
+  const runIdRef = useRef(0);
+  const STREAM_IDLE_TIMEOUT_MS = 30_000;
 
   useEffect(() => {
     return () => {
@@ -98,7 +100,8 @@ export default function AnalysisClient({ initialHistory }: Props) {
     summaryRef.current = "";
   }
 
-  function handleFrame(frame: string) {
+  function handleFrame(frame: string, myRunId: number) {
+    if (myRunId !== runIdRef.current) return;
     let event = "message";
     const dataLines: string[] = [];
     for (const line of frame.split("\n")) {
@@ -156,24 +159,47 @@ export default function AnalysisClient({ initialHistory }: Props) {
     abortRef.current?.abort();
     const ac = new AbortController();
     abortRef.current = ac;
+    const myRunId = ++runIdRef.current;
 
     resetForRun();
     setStatus("streaming");
 
+    let idleTimer: ReturnType<typeof setTimeout> | null = null;
+    const resetIdle = () => {
+      if (idleTimer) clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => {
+        if (!ac.signal.aborted && myRunId === runIdRef.current) {
+          setError("Stream stalled — no data for 30s.");
+          setStatus("error");
+        }
+        ac.abort();
+      }, STREAM_IDLE_TIMEOUT_MS);
+    };
+    const clearIdle = () => {
+      if (idleTimer) {
+        clearTimeout(idleTimer);
+        idleTimer = null;
+      }
+    };
+
     let res: Response;
     try {
+      resetIdle();
       res = await fetch("/api/analytics/ai-analysis", {
         method: "POST",
         signal: ac.signal,
       });
     } catch {
-      if (ac.signal.aborted) return;
+      clearIdle();
+      if (ac.signal.aborted || myRunId !== runIdRef.current) return;
       setError("Network error. Please try again.");
       setStatus("error");
       return;
     }
 
     if (!res.ok || !res.body) {
+      clearIdle();
+      if (myRunId !== runIdRef.current) return;
       let msg = `HTTP ${res.status}`;
       try {
         const j = await res.json();
@@ -195,20 +221,23 @@ export default function AnalysisClient({ initialHistory }: Props) {
         if (ac.signal.aborted) break;
         const { done, value } = await reader.read();
         if (done) break;
+        resetIdle();
         buffer += decoder.decode(value, { stream: true });
 
         let sep: number;
         while ((sep = buffer.indexOf("\n\n")) !== -1) {
           const frame = buffer.slice(0, sep);
           buffer = buffer.slice(sep + 2);
-          if (frame.trim()) handleFrame(frame);
+          if (frame.trim()) handleFrame(frame, myRunId);
         }
       }
     } catch {
-      if (!ac.signal.aborted) {
+      if (!ac.signal.aborted && myRunId === runIdRef.current) {
         setError("Connection lost.");
         setStatus("error");
       }
+    } finally {
+      clearIdle();
     }
   }
 

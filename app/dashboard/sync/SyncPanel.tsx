@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "../../_ui/icons";
 
@@ -42,8 +42,21 @@ export default function SyncPanel({ currentUsername, syncedCount, lastSyncedAt }
   const [backfillMsg, setBackfillMsg] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
   const [showBackfillHelp, setShowBackfillHelp] = useState(false);
 
+  const verifyAbortRef = useRef<AbortController | null>(null);
+  const syncAbortRef = useRef<AbortController | null>(null);
+  const backfillAbortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => () => {
+    verifyAbortRef.current?.abort();
+    syncAbortRef.current?.abort();
+    backfillAbortRef.current?.abort();
+  }, []);
+
   async function handleBackfill() {
     if (!backfillCookie.trim()) return;
+    if (backfillAbortRef.current) return;
+    const ac = new AbortController();
+    backfillAbortRef.current = ac;
     setBackfillLoading(true);
     setBackfillMsg(null);
     try {
@@ -51,8 +64,10 @@ export default function SyncPanel({ currentUsername, syncedCount, lastSyncedAt }
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ leetcodeSession: backfillCookie.trim() }),
+        signal: ac.signal,
       });
       const data = await res.json();
+      if (ac.signal.aborted) return;
       if (!res.ok) {
         setBackfillMsg({ kind: "error", text: data.error ?? "Backfill failed." });
       } else {
@@ -63,9 +78,11 @@ export default function SyncPanel({ currentUsername, syncedCount, lastSyncedAt }
         setBackfillCookie("");
         router.refresh();
       }
-    } catch {
+    } catch (e) {
+      if ((e as Error).name === "AbortError") return;
       setBackfillMsg({ kind: "error", text: "Network error. Try again." });
     } finally {
+      if (backfillAbortRef.current === ac) backfillAbortRef.current = null;
       setBackfillLoading(false);
     }
   }
@@ -74,60 +91,93 @@ export default function SyncPanel({ currentUsername, syncedCount, lastSyncedAt }
 
   async function handleGenerate() {
     if (!username.trim()) return;
+    if (verifyAbortRef.current) return;
+    const ac = new AbortController();
+    verifyAbortRef.current = ac;
     setLoading(true);
     setErrorMsg("");
 
-    const res = await fetch("/api/user/verify-leetcode", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "generate", username: username.trim() }),
-    });
-    const data = await res.json();
-    setLoading(false);
-
-    if (!res.ok) {
-      setErrorMsg(data.error ?? "Something went wrong.");
-      return;
+    try {
+      const res = await fetch("/api/user/verify-leetcode", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "generate", username: username.trim() }),
+        signal: ac.signal,
+      });
+      const data = await res.json();
+      if (ac.signal.aborted) return;
+      if (!res.ok) {
+        setErrorMsg(data.error ?? "Something went wrong.");
+        return;
+      }
+      setToken(data.token);
+      setStage("pending-token");
+    } catch (e) {
+      if ((e as Error).name === "AbortError") return;
+      setErrorMsg("Network error. Try again.");
+    } finally {
+      if (verifyAbortRef.current === ac) verifyAbortRef.current = null;
+      setLoading(false);
     }
-    setToken(data.token);
-    setStage("pending-token");
   }
 
   async function handleVerify() {
+    if (verifyAbortRef.current) return;
+    const ac = new AbortController();
+    verifyAbortRef.current = ac;
     setLoading(true);
     setErrorMsg("");
 
-    const res = await fetch("/api/user/verify-leetcode", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "verify", username: username.trim() }),
-    });
-    const data = await res.json();
-    setLoading(false);
-
-    if (!res.ok || !data.verified) {
-      setErrorMsg(data.error ?? "Verification failed. Try again.");
-      return;
+    try {
+      const res = await fetch("/api/user/verify-leetcode", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "verify", username: username.trim() }),
+        signal: ac.signal,
+      });
+      const data = await res.json();
+      if (ac.signal.aborted) return;
+      if (!res.ok || !data.verified) {
+        setErrorMsg(data.error ?? "Verification failed. Try again.");
+        return;
+      }
+      router.refresh();
+    } catch (e) {
+      if ((e as Error).name === "AbortError") return;
+      setErrorMsg("Network error. Try again.");
+    } finally {
+      if (verifyAbortRef.current === ac) verifyAbortRef.current = null;
+      setLoading(false);
     }
-    router.refresh();
   }
 
   async function handleSync() {
+    if (syncAbortRef.current) return;
+    const ac = new AbortController();
+    syncAbortRef.current = ac;
     setStage("syncing");
     setSyncResult(null);
     setErrorMsg("");
 
-    const res = await fetch("/api/leetcode/sync", { method: "POST" });
-    const data = await res.json();
-
-    if (!res.ok) {
-      setErrorMsg(data.error ?? "Sync failed.");
+    try {
+      const res = await fetch("/api/leetcode/sync", { method: "POST", signal: ac.signal });
+      const data = await res.json();
+      if (ac.signal.aborted) return;
+      if (!res.ok) {
+        setErrorMsg(data.error ?? "Sync failed.");
+        setStage("error");
+        return;
+      }
+      setSyncResult(data.synced);
+      setStage("done");
+      router.refresh();
+    } catch (e) {
+      if ((e as Error).name === "AbortError") return;
+      setErrorMsg("Network error. Try again.");
       setStage("error");
-      return;
+    } finally {
+      if (syncAbortRef.current === ac) syncAbortRef.current = null;
     }
-    setSyncResult(data.synced);
-    setStage("done");
-    router.refresh();
   }
 
   function handleCopy() {

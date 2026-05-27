@@ -20,7 +20,7 @@ export async function POST(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
   if (contest.status !== "ACTIVE") {
-    return NextResponse.json({ error: "Contest already ended" }, { status: 400 });
+    return NextResponse.json({ status: contest.status, alreadyEnded: true });
   }
 
   const elapsedMs = Date.now() - contest.startedAt.getTime();
@@ -28,10 +28,18 @@ export async function POST(
   const newStatus: "COMPLETED" | "ABANDONED" =
     elapsedMs >= durationMs ? "COMPLETED" : "ABANDONED";
 
-  await prisma.contestSession.update({
-    where: { id },
+  const updated = await prisma.contestSession.updateMany({
+    where: { id, status: "ACTIVE" },
     data: { status: newStatus, completedAt: new Date() },
   });
+
+  if (updated.count === 0) {
+    const current = await prisma.contestSession.findUnique({
+      where: { id },
+      select: { status: true },
+    });
+    return NextResponse.json({ status: current?.status ?? newStatus, alreadyEnded: true });
+  }
 
   return NextResponse.json({ status: newStatus });
 }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { checkSubmission } from "@/lib/leetcode";
+import { getRecentSubmissions } from "@/lib/leetcode";
 
 export async function POST(
   _req: NextRequest,
@@ -36,25 +36,37 @@ export async function POST(
     return NextResponse.json({ error: "No LeetCode username configured" }, { status: 400 });
   }
 
-  const updatedQuestions = contest.questions.map((q) => ({ ...q }));
-
-  for (const cq of updatedQuestions) {
-    if (cq.solved) continue;
-    const isSolved = await checkSubmission(user.leetcodeUsername, cq.question.slug);
-    if (isSolved) {
-      await prisma.contestQuestion.update({ where: { id: cq.id }, data: { solved: true } });
-      cq.solved = true;
-    }
+  let acSlugs: Set<string>;
+  try {
+    const data = await getRecentSubmissions(user.leetcodeUsername, 50);
+    acSlugs = new Set(data.recentAcSubmissionList.map((s) => s.titleSlug));
+  } catch {
+    return NextResponse.json({ error: "Could not reach LeetCode. Try again." }, { status: 502 });
   }
 
+  const newlySolved = contest.questions.filter(
+    (cq) => !cq.solved && acSlugs.has(cq.question.slug)
+  );
+
+  const updatedQuestions = contest.questions.map((q) => ({
+    ...q,
+    solved: q.solved || acSlugs.has(q.question.slug),
+  }));
   const allSolved = updatedQuestions.every((q) => q.solved);
-  let newStatus: "ACTIVE" | "COMPLETED" | "ABANDONED" = contest.status;
-  if (allSolved) {
-    await prisma.contestSession.update({
-      where: { id },
-      data: { status: "COMPLETED", completedAt: new Date() },
+  const shouldComplete = allSolved;
+
+  if (newlySolved.length > 0 || shouldComplete) {
+    await prisma.$transaction(async (tx) => {
+      for (const cq of newlySolved) {
+        await tx.contestQuestion.update({ where: { id: cq.id }, data: { solved: true } });
+      }
+      if (shouldComplete) {
+        await tx.contestSession.updateMany({
+          where: { id, status: "ACTIVE" },
+          data: { status: "COMPLETED", completedAt: new Date() },
+        });
+      }
     });
-    newStatus = "COMPLETED";
   }
 
   return NextResponse.json({
@@ -68,6 +80,6 @@ export async function POST(
         difficulty: q.question.difficulty,
       },
     })),
-    status: newStatus,
+    status: shouldComplete ? "COMPLETED" : contest.status,
   });
 }

@@ -1,7 +1,12 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { auth } from "@/auth";
 import { Brand, Icon } from "./_ui/icons";
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  const session = await auth();
+  if (session?.user?.id) redirect("/dashboard");
+
   return (
     <div className="aa-shell">
       {/* Top nav */}
@@ -88,13 +93,13 @@ export default function LandingPage() {
               </div>
             </article>
 
-            <article className="aa-feature aa-span-2">
+            <article className="aa-feature aa-span-3">
               <div className="aa-feature-icon yellow">{Icon.shield()}</div>
               <h3>Upsolving queue</h3>
               <p>Flags missed contest problems and queues them for later review — never lose a learning moment.</p>
             </article>
 
-            <article className="aa-feature aa-span-2">
+            <article className="aa-feature aa-span-3">
               <div className="aa-feature-icon green">{Icon.spark()}</div>
               <h3>AI weakness analysis</h3>
               <p>Feeds your tag distribution to an LLM to generate a personal Blind Spot Report — exactly what to study next.</p>
@@ -107,16 +112,6 @@ export default function LandingPage() {
                     </div>
                   ))}
                 </div>
-              </div>
-            </article>
-
-            <article className="aa-feature aa-span-2">
-              <div className="aa-feature-icon red">{Icon.code()}</div>
-              <h3>Static complexity analyzer</h3>
-              <p>Paste any accepted solution. Get instant Big-O Time + Space estimates with AI optimization tips.</p>
-              <div className="vis">
-                <span className="aa-tag red">O(n log n)</span>{" "}
-                <span className="aa-tag" style={{ marginLeft: 6 }}>Space O(1)</span>
               </div>
             </article>
           </div>

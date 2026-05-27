@@ -29,22 +29,37 @@ export async function POST() {
   });
   if (!user?.leetcodeUsername) return NextResponse.json({ error: "No LeetCode username" }, { status: 400 });
 
-  // 1. Auto-sync recent ACs into UserSolved (public API, no cookie needed).
+  // 1. Auto-sync recent ACs into UserSolved (single batch query + transactional upserts).
   try {
     const recent = await getRecentSubmissions(user.leetcodeUsername, 20);
-    for (const sub of recent.recentAcSubmissionList) {
-      const q = await prisma.question.findUnique({ where: { slug: sub.titleSlug } });
-      if (!q) continue;
-      await prisma.userSolved.upsert({
-        where: { userId_questionId: { userId: session.user.id, questionId: q.id } },
-        update: { solvedAt: new Date(parseInt(sub.timestamp) * 1000), language: sub.lang },
-        create: {
-          userId: session.user.id,
-          questionId: q.id,
-          solvedAt: new Date(parseInt(sub.timestamp) * 1000),
-          language: sub.lang,
-        },
+    const subs = recent.recentAcSubmissionList;
+    if (subs.length > 0) {
+      const slugs = subs.map((s) => s.titleSlug);
+      const existing = await prisma.question.findMany({
+        where: { slug: { in: slugs } },
+        select: { id: true, slug: true },
       });
+      const slugToId = new Map(existing.map((q) => [q.slug, q.id]));
+      const writes = subs
+        .filter((s) => slugToId.has(s.titleSlug))
+        .map((s) =>
+          prisma.userSolved.upsert({
+            where: {
+              userId_questionId: {
+                userId: session.user!.id!,
+                questionId: slugToId.get(s.titleSlug)!,
+              },
+            },
+            update: { solvedAt: new Date(parseInt(s.timestamp) * 1000), language: s.lang },
+            create: {
+              userId: session.user!.id!,
+              questionId: slugToId.get(s.titleSlug)!,
+              solvedAt: new Date(parseInt(s.timestamp) * 1000),
+              language: s.lang,
+            },
+          })
+        );
+      if (writes.length > 0) await prisma.$transaction(writes);
     }
   } catch {
     // Non-fatal — fall through with whatever we have.
@@ -68,74 +83,123 @@ export async function POST() {
 
   const attended = history.userContestRankingHistory
     .filter((c) => c.attended)
+    .filter((c) => !(c.totalProblems > 0 && c.problemsSolved === c.totalProblems))
     .sort((a, b) => b.contest.startTime - a.contest.startTime)
     .slice(0, 10);
 
-  let added = 0;
+  // 4. Parallel fetch all contest details.
+  const detailResults = await Promise.all(
+    attended.map((entry) =>
+      getContestDetails(contestTitleToSlug(entry.contest.title))
+        .then((details) => ({ entry, details }))
+        .catch(() => null)
+    )
+  );
 
-  for (const entry of attended) {
-    // Short-circuit: user cleared the whole contest — nothing to upsolve.
-    if (entry.totalProblems > 0 && entry.problemsSolved === entry.totalProblems) continue;
-
-    const slug = contestTitleToSlug(entry.contest.title);
-    const contestDate = new Date(entry.contest.startTime * 1000);
-
-    let details;
-    try {
-      details = await getContestDetails(slug);
-    } catch {
-      continue;
-    }
+  // 5. Gather all candidate (unsolved) question slugs across all contests.
+  type Candidate = {
+    slug: string;
+    title: string;
+    leetcodeId: number;
+    contestTitle: string;
+    contestDate: Date;
+  };
+  const candidates: Candidate[] = [];
+  for (const result of detailResults) {
+    if (!result) continue;
+    const { entry, details } = result;
     if (!details.questions?.length) continue;
-    await new Promise((r) => setTimeout(r, 200));
-
+    const contestDate = new Date(entry.contest.startTime * 1000);
     for (const q of details.questions) {
       if (solvedSlugs.has(q.title_slug)) continue;
-
-      let question = await prisma.question.findUnique({ where: { slug: q.title_slug } });
-      if (!question) {
-        const leetcodeId = parseInt(q.question_id);
-        if (isNaN(leetcodeId)) continue;
-
-        let difficulty: Difficulty = "MEDIUM";
-        let tags: string[] = [];
-        try {
-          const detail = await getQuestionDetail(q.title_slug);
-          difficulty = mapDifficulty(detail.question.difficulty);
-          tags = detail.question.topicTags.map((t) => t.name);
-        } catch {
-          // Detail fetch failed — fall through and create with defaults; will be refined on next sync.
-        }
-
-        try {
-          question = await prisma.question.upsert({
-            where: { leetcodeId },
-            update: { slug: q.title_slug, title: q.title, difficulty, tags },
-            create: { leetcodeId, slug: q.title_slug, title: q.title, difficulty, tags },
-          });
-        } catch {
-          continue;
-        }
-      }
-
-      try {
-        await prisma.upsolvingItem.create({
-          data: {
-            userId: session.user.id,
-            questionId: question.id,
-            contestTitle: entry.contest.title,
-            contestDate,
-          },
-        });
-        added++;
-      } catch {
-        // Unique constraint (userId, questionId) — already there (active or dismissed); leave it.
-      }
+      const leetcodeId = parseInt(q.question_id);
+      if (isNaN(leetcodeId)) continue;
+      candidates.push({
+        slug: q.title_slug,
+        title: q.title,
+        leetcodeId,
+        contestTitle: entry.contest.title,
+        contestDate,
+      });
     }
   }
 
+  if (candidates.length === 0) {
+    const total = await prisma.upsolvingItem.count({
+      where: { userId: session.user.id, dismissed: false },
+    });
+    return NextResponse.json({ added: 0, total });
+  }
+
+  // 6. One batched lookup for existing Question rows.
+  const existingQs = await prisma.question.findMany({
+    where: { slug: { in: candidates.map((c) => c.slug) } },
+    select: { id: true, slug: true },
+  });
+  const slugToQuestionId = new Map(existingQs.map((q) => [q.slug, q.id]));
+
+  // 7. Parallel detail fetch only for the candidates we need to create.
+  const missing = candidates.filter((c) => !slugToQuestionId.has(c.slug));
+  const missingDetails = await Promise.all(
+    missing.map((c) =>
+      getQuestionDetail(c.slug)
+        .then((d) => ({
+          difficulty: mapDifficulty(d.question.difficulty),
+          tags: d.question.topicTags.map((t) => t.name),
+        }))
+        .catch(() => ({ difficulty: "MEDIUM" as Difficulty, tags: [] as string[] }))
+    )
+  );
+
+  // 8. Create missing Question rows in one transaction (upsert by unique leetcodeId).
+  if (missing.length > 0) {
+    const created = await prisma.$transaction(
+      missing.map((c, i) =>
+        prisma.question.upsert({
+          where: { leetcodeId: c.leetcodeId },
+          update: { slug: c.slug, title: c.title, difficulty: missingDetails[i].difficulty, tags: missingDetails[i].tags },
+          create: {
+            leetcodeId: c.leetcodeId,
+            slug: c.slug,
+            title: c.title,
+            difficulty: missingDetails[i].difficulty,
+            tags: missingDetails[i].tags,
+          },
+        })
+      )
+    );
+    created.forEach((q) => slugToQuestionId.set(q.slug, q.id));
+  }
+
+  // 9. Upsert UpsolvingItem rows in one transaction.
+  const upsolveWrites = candidates
+    .filter((c) => slugToQuestionId.has(c.slug))
+    .map((c) =>
+      prisma.upsolvingItem.upsert({
+        where: {
+          userId_questionId: {
+            userId: session.user!.id!,
+            questionId: slugToQuestionId.get(c.slug)!,
+          },
+        },
+        update: {},
+        create: {
+          userId: session.user!.id!,
+          questionId: slugToQuestionId.get(c.slug)!,
+          contestTitle: c.contestTitle,
+          contestDate: c.contestDate,
+        },
+      })
+    );
+
+  // Count pre-existing items so we can report new additions only.
+  const preCount = await prisma.upsolvingItem.count({
+    where: { userId: session.user.id, dismissed: false },
+  });
+  if (upsolveWrites.length > 0) await prisma.$transaction(upsolveWrites);
   const total = await prisma.upsolvingItem.count({
     where: { userId: session.user.id, dismissed: false },
   });
-  return NextResponse.json({ added, total });
+
+  return NextResponse.json({ added: Math.max(0, total - preCount), total });
 }

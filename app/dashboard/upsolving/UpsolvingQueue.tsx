@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "../../_ui/icons";
 
@@ -53,13 +53,29 @@ export default function UpsolvingQueue({ items: initialItems }: Props) {
   const [adding, setAdding] = useState(false);
   const [resetting, setResetting] = useState(false);
 
+  const refreshAbortRef = useRef<AbortController | null>(null);
+  const addAbortRef = useRef<AbortController | null>(null);
+  const resetAbortRef = useRef<AbortController | null>(null);
+  const markDoneAbortRef = useRef<Map<string, AbortController>>(new Map());
+
+  useEffect(() => () => {
+    refreshAbortRef.current?.abort();
+    addAbortRef.current?.abort();
+    resetAbortRef.current?.abort();
+    markDoneAbortRef.current.forEach((ac) => ac.abort());
+  }, []);
+
   async function handleReset() {
+    if (resetAbortRef.current) return;
     if (!confirm("Wipe your entire upsolve queue? You'll need to Refresh again to rebuild it.")) return;
+    const ac = new AbortController();
+    resetAbortRef.current = ac;
     setResetting(true);
     setToast(null);
     try {
-      const res = await fetch("/api/upsolving/reset", { method: "POST" });
+      const res = await fetch("/api/upsolving/reset", { method: "POST", signal: ac.signal });
       const data = await res.json();
+      if (ac.signal.aborted) return;
       if (!res.ok) {
         setToast(data.error ?? "Reset failed.");
       } else {
@@ -67,20 +83,26 @@ export default function UpsolvingQueue({ items: initialItems }: Props) {
         setToast(`Cleared ${data.deleted} item${data.deleted !== 1 ? "s" : ""}.`);
         router.refresh();
       }
-    } catch {
+    } catch (e) {
+      if ((e as Error).name === "AbortError") return;
       setToast("Network error. Try again.");
     } finally {
+      if (resetAbortRef.current === ac) resetAbortRef.current = null;
       setResetting(false);
       setTimeout(() => setToast(null), 4000);
     }
   }
 
   async function handleRefresh() {
+    if (refreshAbortRef.current) return;
+    const ac = new AbortController();
+    refreshAbortRef.current = ac;
     setRefreshing(true);
     setToast(null);
     try {
-      const res = await fetch("/api/upsolving/refresh", { method: "POST" });
+      const res = await fetch("/api/upsolving/refresh", { method: "POST", signal: ac.signal });
       const data = await res.json();
+      if (ac.signal.aborted) return;
       if (!res.ok) {
         setToast(data.error ?? "Refresh failed.");
       } else {
@@ -91,9 +113,11 @@ export default function UpsolvingQueue({ items: initialItems }: Props) {
         setToast(msg);
         router.refresh();
       }
-    } catch {
+    } catch (e) {
+      if ((e as Error).name === "AbortError") return;
       setToast("Network error. Try again.");
     } finally {
+      if (refreshAbortRef.current === ac) refreshAbortRef.current = null;
       setRefreshing(false);
       setTimeout(() => setToast(null), 4000);
     }
@@ -101,7 +125,10 @@ export default function UpsolvingQueue({ items: initialItems }: Props) {
 
   async function handleAddContest() {
     if (!contestInput.trim()) return;
+    if (addAbortRef.current) return;
     const slug = contestInput.trim().toLowerCase().replace(/\s+/g, "-");
+    const ac = new AbortController();
+    addAbortRef.current = ac;
     setAdding(true);
     setToast(null);
     try {
@@ -109,8 +136,10 @@ export default function UpsolvingQueue({ items: initialItems }: Props) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ contestSlug: slug }),
+        signal: ac.signal,
       });
       const data = await res.json();
+      if (ac.signal.aborted) return;
       if (!res.ok) {
         setToast(data.error ?? "Failed to add contest.");
       } else {
@@ -122,26 +151,60 @@ export default function UpsolvingQueue({ items: initialItems }: Props) {
         setContestInput("");
         router.refresh();
       }
-    } catch {
+    } catch (e) {
+      if ((e as Error).name === "AbortError") return;
       setToast("Network error. Try again.");
     } finally {
+      if (addAbortRef.current === ac) addAbortRef.current = null;
       setAdding(false);
       setTimeout(() => setToast(null), 5000);
     }
   }
 
   async function handleMarkDone(itemId: string) {
+    if (markDoneAbortRef.current.has(itemId)) return;
+    const ac = new AbortController();
+    markDoneAbortRef.current.set(itemId, ac);
     setMarkingDone(itemId);
-    setItems((prev) => prev.filter((i) => i.id !== itemId));
+
+    let removedItem: UpsolvingItem | undefined;
+    let removedIndex = -1;
+    setItems((prev) => {
+      removedIndex = prev.findIndex((i) => i.id === itemId);
+      removedItem = prev[removedIndex];
+      return removedIndex === -1 ? prev : prev.filter((i) => i.id !== itemId);
+    });
+
+    const restore = () => {
+      if (!removedItem || removedIndex < 0) return;
+      setItems((prev) => {
+        if (prev.some((i) => i.id === itemId)) return prev;
+        const copy = prev.slice();
+        copy.splice(Math.min(removedIndex, copy.length), 0, removedItem!);
+        return copy;
+      });
+    };
+
     try {
-      await fetch("/api/upsolving/mark-done", {
+      const res = await fetch("/api/upsolving/mark-done", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ itemId }),
+        signal: ac.signal,
       });
-    } catch {
-      // optimistic
+      if (ac.signal.aborted) return;
+      if (!res.ok) {
+        restore();
+        setToast("Couldn't mark done. Try again.");
+        setTimeout(() => setToast(null), 4000);
+      }
+    } catch (e) {
+      if ((e as Error).name === "AbortError") return;
+      restore();
+      setToast("Network error. Try again.");
+      setTimeout(() => setToast(null), 4000);
     } finally {
+      markDoneAbortRef.current.delete(itemId);
       setMarkingDone(null);
     }
   }

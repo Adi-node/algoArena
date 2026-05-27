@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
@@ -36,23 +36,34 @@ export default function PracticeRoom({
 }: Props) {
   const [code, setCode] = useState(initialCode);
   const [state, setState] = useState<RunState>({ kind: "idle" });
+  const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => () => abortRef.current?.abort(), []);
 
   async function runCode() {
+    if (abortRef.current) return;
+    const ac = new AbortController();
+    abortRef.current = ac;
     setState({ kind: "running" });
     try {
       const res = await fetch("/api/execute", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ questionId, category, code }),
+        signal: ac.signal,
       });
       const data = await res.json();
+      if (ac.signal.aborted) return;
       if (!res.ok) {
         setState({ kind: "error", message: data.error ?? `HTTP ${res.status}` });
         return;
       }
       setState({ kind: "done", passed: !!data.passed, output: data.output ?? "" });
     } catch (e) {
+      if ((e as Error).name === "AbortError") return;
       setState({ kind: "error", message: e instanceof Error ? e.message : "Network error" });
+    } finally {
+      if (abortRef.current === ac) abortRef.current = null;
     }
   }
 
@@ -117,8 +128,8 @@ export default function PracticeRoom({
           </div>
 
           <div className="ap-console">
-            {state.kind === "idle" && <span className="ap-console-dim">// Output will appear here</span>}
-            {state.kind === "running" && <span className="ap-console-dim">// Executing…</span>}
+            {state.kind === "idle" && <span className="ap-console-dim">{"// Output will appear here"}</span>}
+            {state.kind === "running" && <span className="ap-console-dim">{"// Executing…"}</span>}
             {state.kind === "error" && <span style={{ color: "var(--rc-red)" }}>{state.message}</span>}
             {state.kind === "done" && (
               <pre className="ap-console-pre">{state.output || "(no output)"}</pre>

@@ -26,8 +26,8 @@ function StatCard({ label, value, sub, href, mono }: StatCardProps) {
   );
 }
 
-async function RatingStatCard({ username }: { username: string }) {
-  const h = await getContestHistory(username).catch(() => null);
+async function RatingStatCard({ username, ownerUserId }: { username: string; ownerUserId: string }) {
+  const h = await getContestHistory(username, ownerUserId).catch(() => null);
   const rating = h?.userContestRanking?.rating ? Math.round(h.userContestRanking.rating) : null;
   const attended = (h?.userContestRankingHistory ?? []).filter((c) => c.attended).length;
   return (
@@ -96,7 +96,7 @@ export default async function DashboardPage() {
         />
         {hasLc ? (
           <Suspense fallback={<RatingStatSkeleton />}>
-            <RatingStatCard username={user!.leetcodeUsername!} />
+            <RatingStatCard username={user!.leetcodeUsername!} ownerUserId={session.user.id} />
           </Suspense>
         ) : (
           <StatCard label="Contest Rating" value="—" sub="Connect LeetCode" href="/dashboard/sync" />
@@ -119,7 +119,7 @@ export default async function DashboardPage() {
       <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 12, marginTop: 12 }}>
         {hasLc ? (
           <Suspense fallback={<RatingPanelSkeleton />}>
-            <RatingPanel username={user!.leetcodeUsername!} />
+            <RatingPanel username={user!.leetcodeUsername!} ownerUserId={session.user.id} />
           </Suspense>
         ) : (
           <div className="aa-panel">
@@ -136,7 +136,7 @@ export default async function DashboardPage() {
         )}
         {hasLc ? (
           <Suspense fallback={<HeatmapPanelSkeleton year={currentYear} />}>
-            <HeatmapPanel username={user!.leetcodeUsername!} year={currentYear} />
+            <HeatmapPanel username={user!.leetcodeUsername!} ownerUserId={session.user.id} year={currentYear} />
           </Suspense>
         ) : (
           <div className="aa-panel">
