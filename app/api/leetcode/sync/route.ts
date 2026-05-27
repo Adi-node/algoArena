@@ -57,7 +57,8 @@ export async function POST(_req: NextRequest) {
           tags: detailResults[i].tags,
         },
       })
-    )
+    ),
+    { timeout: 15_000 }
   );
 
   await prisma.$transaction(
@@ -72,7 +73,8 @@ export async function POST(_req: NextRequest) {
           language: sub.lang,
         },
       })
-    )
+    ),
+    { timeout: 15_000 }
   );
 
   revalidateTag(leetcodeUserTag(session.user.id), "max");

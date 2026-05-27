@@ -143,7 +143,8 @@ export async function POST(req: NextRequest) {
             tags: d.tags,
           },
         })
-      )
+      ),
+      { timeout: 30_000 }
     );
     created.forEach((q) => knownBySlug.set(q.slug, { id: q.id, slug: q.slug, leetcodeId: q.leetcodeId }));
   }
@@ -187,7 +188,8 @@ export async function POST(req: NextRequest) {
         prisma.userSolved.create({
           data: { userId, questionId: w.questionId, solvedAt: w.solvedAt, language: "" },
         })
-      )
+      ),
+      { timeout: 30_000 }
     );
   }
 

@@ -66,7 +66,7 @@ export async function POST(
           data: { status: "COMPLETED", completedAt: new Date() },
         });
       }
-    });
+    }, { timeout: 15_000 });
   }
 
   return NextResponse.json({
