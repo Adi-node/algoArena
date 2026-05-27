@@ -19,6 +19,11 @@ enum ContestStatus {
   ABANDONED
 }
 
+enum PracticeStatus {
+  PASSED
+  ATTEMPTED
+}
+
 model User {
   id               String           @id @default(cuid())
   name             String?
@@ -35,6 +40,7 @@ model User {
   contestSessions  ContestSession[]
   upsolvingItems   UpsolvingItem[]
   weakTopicAnalyses WeakTopicAnalysis[]
+  practiceAttempts  PracticeAttempt[]
 }
 
 model Account {
@@ -131,6 +137,20 @@ model ContestQuestion {
   solved           Boolean        @default(false)
   contestSession   ContestSession @relation(fields: [contestSessionId], references: [id])
   question         Question       @relation(fields: [questionId], references: [id])
+}
+
+model PracticeAttempt {
+  id         String         @id @default(cuid())
+  userId     String
+  questionId String
+  category   String
+  code       String         @db.Text
+  output     String         @db.Text
+  status     PracticeStatus
+  createdAt  DateTime       @default(now())
+  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
 }
 
 model WeakTopicAnalysis {

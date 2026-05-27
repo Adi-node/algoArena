@@ -1,4 +1,11 @@
+import { unstable_cache } from "next/cache";
+
 const LEETCODE_GRAPHQL_URL = "https://leetcode.com/graphql";
+const LEETCODE_FETCH_TIMEOUT_MS = 8000;
+
+export function leetcodeUserTag(username: string) {
+  return `leetcode:user:${username}`;
+}
 
 async function fetchLeetCode<T>(query: string, variables: Record<string, unknown> = {}): Promise<T> {
   const headers: Record<string, string> = {
@@ -14,6 +21,7 @@ async function fetchLeetCode<T>(query: string, variables: Record<string, unknown
     method: "POST",
     headers,
     body: JSON.stringify({ query, variables }),
+    signal: AbortSignal.timeout(LEETCODE_FETCH_TIMEOUT_MS),
   });
 
   if (!res.ok) throw new Error(`LeetCode API error: ${res.status}`);
@@ -90,34 +98,74 @@ export async function getQuestionDetail(slug: string) {
   );
 }
 
-export async function getContestHistory(username: string) {
-  return fetchLeetCode<{
-    userContestRanking: {
-      rating: number;
-      globalRanking: number;
-      totalParticipants: number;
-      topPercentage: number;
-    } | null;
-    userContestRankingHistory: {
-      attended: boolean;
-      rating: number;
-      ranking: number;
-      trendingDirection: string;
-      finishTimeInSeconds: number;
-      contest: { title: string; startTime: number };
-    }[];
-  }>(
+type ContestHistory = {
+  userContestRanking: {
+    rating: number;
+    globalRanking: number;
+    totalParticipants: number;
+    topPercentage: number;
+  } | null;
+  userContestRankingHistory: {
+    attended: boolean;
+    rating: number;
+    ranking: number;
+    contest: { title: string; startTime: number };
+  }[];
+};
+
+function _getContestHistory(username: string) {
+  return fetchLeetCode<ContestHistory>(
     `query getContestHistory($username: String!) {
       userContestRanking(username: $username) {
         rating globalRanking totalParticipants topPercentage
       }
       userContestRankingHistory(username: $username) {
-        attended rating ranking trendingDirection finishTimeInSeconds
+        attended rating ranking
         contest { title startTime }
       }
     }`,
     { username }
   );
+}
+
+export function getContestHistory(username: string): Promise<ContestHistory> {
+  return unstable_cache(
+    () => _getContestHistory(username),
+    ["leetcode:contestHistory", username],
+    { revalidate: 300, tags: [leetcodeUserTag(username)] },
+  )();
+}
+
+type UserCalendar = {
+  matchedUser: {
+    userCalendar: {
+      activeYears: number[];
+      streak: number;
+      totalActiveDays: number;
+      submissionCalendar: string;
+    };
+  } | null;
+};
+
+function _getUserCalendar(username: string, year?: number) {
+  return fetchLeetCode<UserCalendar>(
+    `query getUserCalendar($username: String!, $year: Int) {
+      matchedUser(username: $username) {
+        userCalendar(year: $year) {
+          activeYears streak totalActiveDays submissionCalendar
+        }
+      }
+    }`,
+    { username, year }
+  );
+}
+
+export function getUserCalendar(username: string, year?: number): Promise<UserCalendar> {
+  return unstable_cache(
+    () => _getUserCalendar(username, year),
+    ["leetcode:userCalendar", username, String(year ?? "")],
+    { revalidate: 300, tags: [leetcodeUserTag(username)] },
+  )();
 }
 
 export async function getContestRankingHistory(username: string) {

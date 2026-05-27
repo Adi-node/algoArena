@@ -1,0 +1,182 @@
+[
+  {
+    "id": "express-ok-handler",
+    "title": "JSON OK Handler",
+    "category": "express",
+    "difficulty": "Easy",
+    "description": "## JSON OK Handler\n\nExport an Express-style request handler `okHandler(req, res)` that responds with status 200 and JSON body `{ ok: true }`.\n\nAssume `res` exposes `status(code)` (chainable) and `json(payload)`.",
+    "starterCode": "function okHandler(req, res) {\n  // your code here\n}\n\nmodule.exports = { okHandler };\n",
+    "hiddenTestCode": "\ntry {\n  const { okHandler } = module.exports;\n  let statusCode = 0;\n  let body = null;\n  const res = {\n    status(c) { statusCode = c; return this; },\n    json(p) { body = p; return this; },\n  };\n  okHandler({}, res);\n  if (statusCode !== 200) throw new Error('expected status 200, got ' + statusCode);\n  if (!body || body.ok !== true) throw new Error('expected { ok: true }, got ' + JSON.stringify(body));\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "express-validate-name",
+    "title": "Validate request body",
+    "category": "express",
+    "difficulty": "Medium",
+    "description": "## Validate request body\n\nExport a handler `createUser(req, res)` that:\n\n- If `req.body.name` is missing or empty, respond with status `400` and body `{ error: 'name required' }`.\n- Otherwise respond with status `201` and body `{ id: 1, name: req.body.name }`.",
+    "starterCode": "function createUser(req, res) {\n  // your code here\n}\n\nmodule.exports = { createUser };\n",
+    "hiddenTestCode": "\ntry {\n  const { createUser } = module.exports;\n  const makeRes = () => {\n    const r = { _status: 0, _body: null };\n    r.status = (c) => { r._status = c; return r; };\n    r.json = (p) => { r._body = p; return r; };\n    return r;\n  };\n  const r1 = makeRes();\n  createUser({ body: {} }, r1);\n  if (r1._status !== 400) throw new Error('missing name should be 400, got ' + r1._status);\n  if (!r1._body || r1._body.error !== 'name required') throw new Error('wrong error body: ' + JSON.stringify(r1._body));\n  const r2 = makeRes();\n  createUser({ body: { name: 'Ada' } }, r2);\n  if (r2._status !== 201) throw new Error('valid name should be 201, got ' + r2._status);\n  if (!r2._body || r2._body.id !== 1 || r2._body.name !== 'Ada') throw new Error('wrong success body: ' + JSON.stringify(r2._body));\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "express-simple-middleware",
+    "title": "Simple Middleware",
+    "category": "express",
+    "difficulty": "Easy",
+    "description": "## Simple Middleware\n\nExport a middleware function `logger(req, res, next)` that simply calls the `next()` function to pass control to the next handler.\n\nYou do not need to log anything or modify the response.",
+    "starterCode": "function logger(req, res, next) {\n  // your code here\n}\n\nmodule.exports = { logger };\n",
+    "hiddenTestCode": "\ntry {\n  const { logger } = module.exports;\n  let nextCalled = false;\n  const next = () => { nextCalled = true; };\n  logger({}, {}, next);\n  if (!nextCalled) throw new Error('next() was not called');\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "express-query-params",
+    "title": "Read Query Parameters",
+    "category": "express",
+    "difficulty": "Easy",
+    "description": "## Read Query Parameters\n\nExport a handler `greet(req, res)` that reads the `name` property from `req.query`.\n\n- If `name` exists, respond with status 200 and JSON: `{ message: \"Hello [name]\" }`\n- If `name` is missing, respond with status 200 and JSON: `{ message: \"Hello Guest\" }`",
+    "starterCode": "function greet(req, res) {\n  // your code here\n}\n\nmodule.exports = { greet };\n",
+    "hiddenTestCode": "\ntry {\n  const { greet } = module.exports;\n  const makeRes = () => { const r = { _status: 200, _body: null, status(c) { this._status = c; return this; }, json(p) { this._body = p; return this; } }; return r; };\n  let res1 = makeRes();\n  greet({ query: { name: 'Alice' } }, res1);\n  if (res1._body.message !== 'Hello Alice') throw new Error('Failed with name query. Got: ' + res1._body.message);\n  let res2 = makeRes();\n  greet({ query: {} }, res2);\n  if (res2._body.message !== 'Hello Guest') throw new Error('Failed without name query. Got: ' + res2._body.message);\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "express-url-params",
+    "title": "Read URL Parameters",
+    "category": "express",
+    "difficulty": "Easy",
+    "description": "## Read URL Parameters\n\nExport a handler `getUser(req, res)` that reads the `id` from `req.params`.\n\nRespond with status 200 and JSON body `{ userId: id }`, where `id` is the exact value extracted from the parameters.",
+    "starterCode": "function getUser(req, res) {\n  // your code here\n}\n\nmodule.exports = { getUser };\n",
+    "hiddenTestCode": "\ntry {\n  const { getUser } = module.exports;\n  const makeRes = () => { const r = { _status: 200, _body: null, status(c) { this._status = c; return this; }, json(p) { this._body = p; return this; } }; return r; };\n  let res = makeRes();\n  getUser({ params: { id: '99' } }, res);\n  if (res._body.userId !== '99') throw new Error('Failed to extract id. Got: ' + JSON.stringify(res._body));\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "express-auth-check",
+    "title": "Authorization Check",
+    "category": "express",
+    "difficulty": "Medium",
+    "description": "## Authorization Check\n\nExport a middleware `checkAuth(req, res, next)` that examines `req.headers.authorization`.\n\n- If the header is missing, respond with status `401` and JSON `{ error: \"Unauthorized\" }`.\n- If the header exists, call `next()`.",
+    "starterCode": "function checkAuth(req, res, next) {\n  // your code here\n}\n\nmodule.exports = { checkAuth };\n",
+    "hiddenTestCode": "\ntry {\n  const { checkAuth } = module.exports;\n  const makeRes = () => { const r = { _status: 200, _body: null, status(c) { this._status = c; return this; }, json(p) { this._body = p; return this; } }; return r; };\n  let res1 = makeRes(); let next1 = false;\n  checkAuth({ headers: {} }, res1, () => { next1 = true; });\n  if (res1._status !== 401 || next1) throw new Error('Should block if no auth header');\n  let res2 = makeRes(); let next2 = false;\n  checkAuth({ headers: { authorization: 'token' } }, res2, () => { next2 = true; });\n  if (!next2) throw new Error('Should call next() if auth header exists');\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "express-error-handler",
+    "title": "Basic Error Handler",
+    "category": "express",
+    "difficulty": "Medium",
+    "description": "## Basic Error Handler\n\nExport an Express error-handling middleware function `errorHandler(err, req, res, next)`.\n\nIt should catch the error and respond with status `500` and JSON `{ error: err.message }`.",
+    "starterCode": "function errorHandler(err, req, res, next) {\n  // your code here\n}\n\nmodule.exports = { errorHandler };\n",
+    "hiddenTestCode": "\ntry {\n  const { errorHandler } = module.exports;\n  const makeRes = () => { const r = { _status: 200, _body: null, status(c) { this._status = c; return this; }, json(p) { this._body = p; return this; } }; return r; };\n  let res = makeRes();\n  const mockErr = new Error('Database crash');\n  errorHandler(mockErr, {}, res, () => {});\n  if (res._status !== 500) throw new Error('Status should be 500, got ' + res._status);\n  if (res._body.error !== 'Database crash') throw new Error('Wrong error message in body');\n  if (errorHandler.length !== 4) throw new Error('Error handler must accept exactly 4 arguments (err, req, res, next)');\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "express-not-found",
+    "title": "Not Found Handler",
+    "category": "express",
+    "difficulty": "Easy",
+    "description": "## Not Found Handler\n\nExport a handler `notFound(req, res)` that is used to catch undefined routes.\n\nIt must respond with status `404` and JSON `{ error: \"Not Found\" }`.",
+    "starterCode": "function notFound(req, res) {\n  // your code here\n}\n\nmodule.exports = { notFound };\n",
+    "hiddenTestCode": "\ntry {\n  const { notFound } = module.exports;\n  const makeRes = () => { const r = { _status: 200, _body: null, status(c) { this._status = c; return this; }, json(p) { this._body = p; return this; } }; return r; };\n  let res = makeRes();\n  notFound({}, res);\n  if (res._status !== 404) throw new Error('Expected status 404, got ' + res._status);\n  if (res._body.error !== 'Not Found') throw new Error('Expected JSON { error: \"Not Found\" }');\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "express-redirect",
+    "title": "Redirect Handler",
+    "category": "express",
+    "difficulty": "Easy",
+    "description": "## Redirect Handler\n\nExport a handler `redirectHome(req, res)` that redirects the user to `/home`.\n\nAssume `res` exposes `redirect(url)`.",
+    "starterCode": "function redirectHome(req, res) {\n  // your code here\n}\n\nmodule.exports = { redirectHome };\n",
+    "hiddenTestCode": "\ntry {\n  const { redirectHome } = module.exports;\n  let redirectUrl = '';\n  const res = { redirect(url) { redirectUrl = url; } };\n  redirectHome({}, res);\n  if (redirectUrl !== '/home') throw new Error('Expected redirect to /home, got ' + redirectUrl);\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "express-set-header",
+    "title": "Cache Control Header",
+    "category": "express",
+    "difficulty": "Medium",
+    "description": "## Cache Control Header\n\nExport a middleware `noCache(req, res, next)` that sets the `Cache-Control` header to `no-store` and then calls `next()`.\n\nAssume `res` exposes `setHeader(key, value)`.",
+    "starterCode": "function noCache(req, res, next) {\n  // your code here\n}\n\nmodule.exports = { noCache };\n",
+    "hiddenTestCode": "\ntry {\n  const { noCache } = module.exports;\n  let headers = {};\n  let nextCalled = false;\n  const res = { setHeader(k, v) { headers[k.toLowerCase()] = v; } };\n  noCache({}, res, () => { nextCalled = true; });\n  if (headers['cache-control'] !== 'no-store') throw new Error('Cache-Control header not set correctly');\n  if (!nextCalled) throw new Error('next() was not called');\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "express-method-check",
+    "title": "Ensure POST Method",
+    "category": "express",
+    "difficulty": "Medium",
+    "description": "## Ensure POST Method\n\nExport a middleware `requirePost(req, res, next)` that enforces the HTTP method.\n\n- If `req.method` is strictly `'POST'`, call `next()`.\n- Otherwise, respond with status `405` and JSON `{ error: \"Method Not Allowed\" }`.",
+    "starterCode": "function requirePost(req, res, next) {\n  // your code here\n}\n\nmodule.exports = { requirePost };\n",
+    "hiddenTestCode": "\ntry {\n  const { requirePost } = module.exports;\n  const makeRes = () => { const r = { _status: 200, _body: null, status(c) { this._status = c; return this; }, json(p) { this._body = p; return this; } }; return r; };\n  let res1 = makeRes(); let next1 = false;\n  requirePost({ method: 'GET' }, res1, () => { next1 = true; });\n  if (res1._status !== 405 || next1) throw new Error('Failed to block non-POST request');\n  let res2 = makeRes(); let next2 = false;\n  requirePost({ method: 'POST' }, res2, () => { next2 = true; });\n  if (!next2) throw new Error('Failed to call next() on POST request');\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "express-pagination",
+    "title": "Pagination Math",
+    "category": "express",
+    "difficulty": "Hard",
+    "description": "## Pagination Math\n\nExport a handler `paginate(req, res)` that reads `page` and `limit` from `req.query`.\n\n- Parse them to integers. Default `page` to `1` and `limit` to `10` if they are missing.\n- Calculate the `skip` value (`(page - 1) * limit`).\n- Respond with JSON: `{ skip: calculatedSkip, limit: parsedLimit }`.",
+    "starterCode": "function paginate(req, res) {\n  // your code here\n}\n\nmodule.exports = { paginate };\n",
+    "hiddenTestCode": "\ntry {\n  const { paginate } = module.exports;\n  const makeRes = () => { const r = { _status: 200, _body: null, status(c) { this._status = c; return this; }, json(p) { this._body = p; return this; } }; return r; };\n  let res1 = makeRes();\n  paginate({ query: {} }, res1);\n  if (res1._body.skip !== 0 || res1._body.limit !== 10) throw new Error('Failed defaults. Got: ' + JSON.stringify(res1._body));\n  let res2 = makeRes();\n  paginate({ query: { page: '3', limit: '15' } }, res2);\n  if (res2._body.skip !== 30 || res2._body.limit !== 15) throw new Error('Failed calculation. Got: ' + JSON.stringify(res2._body));\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "express-send-text",
+    "title": "Send Plain Text",
+    "category": "express",
+    "difficulty": "Easy",
+    "description": "## Send Plain Text\n\nExport a handler `sendText(req, res)` that sends a plain text response instead of JSON.\n\nRespond with status `200` and use `res.send('Hello World')`.",
+    "starterCode": "function sendText(req, res) {\n  // your code here\n}\n\nmodule.exports = { sendText };\n",
+    "hiddenTestCode": "\ntry {\n  const { sendText } = module.exports;\n  const makeRes = () => { const r = { _status: 0, _text: null, status(c) { this._status = c; return this; }, send(p) { this._text = p; return this; } }; return r; };\n  let res = makeRes();\n  sendText({}, res);\n  if (res._status !== 200) throw new Error('Expected status 200');\n  if (res._text !== 'Hello World') throw new Error('Expected plain text \"Hello World\"');\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "express-extract-bearer",
+    "title": "Extract Bearer Token",
+    "category": "express",
+    "difficulty": "Hard",
+    "description": "## Extract Bearer Token\n\nExport a middleware `extractToken(req, res, next)`.\n\n- Read `req.headers.authorization`.\n- If it exists and starts with `\"Bearer \"`, extract the token string after the space, assign it to `req.token`, and call `next()`.\n- Otherwise, respond with status `401` and JSON `{ error: \"Invalid format\" }`.",
+    "starterCode": "function extractToken(req, res, next) {\n  // your code here\n}\n\nmodule.exports = { extractToken };\n",
+    "hiddenTestCode": "\ntry {\n  const { extractToken } = module.exports;\n  const makeRes = () => { const r = { _status: 200, _body: null, status(c) { this._status = c; return this; }, json(p) { this._body = p; return this; } }; return r; };\n  let res1 = makeRes(); let req1 = { headers: {} };\n  extractToken(req1, res1, () => {});\n  if (res1._status !== 401) throw new Error('Should block missing header');\n  let res2 = makeRes(); let req2 = { headers: { authorization: 'Bearer supersecret123' } };\n  let nextCalled = false;\n  extractToken(req2, res2, () => { nextCalled = true; });\n  if (!nextCalled || req2.token !== 'supersecret123') throw new Error('Failed to extract token or call next. req.token=' + req2.token);\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "express-admin-guard",
+    "title": "Admin Role Guard",
+    "category": "express",
+    "difficulty": "Medium",
+    "description": "## Admin Role Guard\n\nExport a middleware `isAdmin(req, res, next)`.\n\n- If `req.user` exists and `req.user.role` is exactly `'admin'`, call `next()`.\n- Otherwise, respond with status `403` and JSON `{ error: \"Forbidden\" }`.",
+    "starterCode": "function isAdmin(req, res, next) {\n  // your code here\n}\n\nmodule.exports = { isAdmin };\n",
+    "hiddenTestCode": "\ntry {\n  const { isAdmin } = module.exports;\n  const makeRes = () => { const r = { _status: 200, _body: null, status(c) { this._status = c; return this; }, json(p) { this._body = p; return this; } }; return r; };\n  let res1 = makeRes(); let next1 = false;\n  isAdmin({ user: { role: 'user' } }, res1, () => { next1 = true; });\n  if (res1._status !== 403 || next1) throw new Error('Failed to block non-admin');\n  let res2 = makeRes(); let next2 = false;\n  isAdmin({ user: { role: 'admin' } }, res2, () => { next2 = true; });\n  if (!next2) throw new Error('Failed to allow admin');\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "express-read-cookies",
+    "title": "Session Cookie Guard",
+    "category": "express",
+    "difficulty": "Medium",
+    "description": "## Session Cookie Guard\n\nExport a middleware `requireSession(req, res, next)`.\n\n- Check if `req.cookies` contains a `sessionId` property.\n- If it exists, call `next()`.\n- If missing (or if `req.cookies` is undefined), return status `401` and JSON `{ error: \"No session\" }`.",
+    "starterCode": "function requireSession(req, res, next) {\n  // your code here\n}\n\nmodule.exports = { requireSession };\n",
+    "hiddenTestCode": "\ntry {\n  const { requireSession } = module.exports;\n  const makeRes = () => { const r = { _status: 200, _body: null, status(c) { this._status = c; return this; }, json(p) { this._body = p; return this; } }; return r; };\n  let res1 = makeRes(); let next1 = false;\n  requireSession({}, res1, () => { next1 = true; });\n  if (res1._status !== 401 || next1) throw new Error('Failed to handle missing req.cookies object');\n  let res2 = makeRes(); let next2 = false;\n  requireSession({ cookies: { sessionId: 'xyz' } }, res2, () => { next2 = true; });\n  if (!next2) throw new Error('Failed to allow request with sessionId cookie');\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "express-request-timestamp",
+    "title": "Request Timestamp",
+    "category": "express",
+    "difficulty": "Easy",
+    "description": "## Request Timestamp\n\nExport a middleware `addTimestamp(req, res, next)`.\n\nIt should attach the current time in milliseconds (using `Date.now()`) to the request object as `req.timestamp` and then call `next()`.",
+    "starterCode": "function addTimestamp(req, res, next) {\n  // your code here\n}\n\nmodule.exports = { addTimestamp };\n",
+    "hiddenTestCode": "\ntry {\n  const { addTimestamp } = module.exports;\n  let req = {};\n  let nextCalled = false;\n  addTimestamp(req, {}, () => { nextCalled = true; });\n  if (!nextCalled) throw new Error('next() not called');\n  if (typeof req.timestamp !== 'number' || Date.now() - req.timestamp > 1000) throw new Error('req.timestamp not set correctly');\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "express-smart-error",
+    "title": "Smart Error Handler",
+    "category": "express",
+    "difficulty": "Hard",
+    "description": "## Smart Error Handler\n\nExport an error middleware `smartError(err, req, res, next)`.\n\n- If `err.name` is exactly `'ValidationError'`, respond with status `400` and JSON `{ error: \"Bad Request\" }`.\n- For all other errors, respond with status `500` and JSON `{ error: \"Internal Server Error\" }`.",
+    "starterCode": "function smartError(err, req, res, next) {\n  // your code here\n}\n\nmodule.exports = { smartError };\n",
+    "hiddenTestCode": "\ntry {\n  const { smartError } = module.exports;\n  const makeRes = () => { const r = { _status: 200, _body: null, status(c) { this._status = c; return this; }, json(p) { this._body = p; return this; } }; return r; };\n  let res1 = makeRes();\n  smartError({ name: 'ValidationError' }, {}, res1, () => {});\n  if (res1._status !== 400 || res1._body.error !== 'Bad Request') throw new Error('Failed ValidationError check');\n  let res2 = makeRes();\n  smartError(new Error('Random crash'), {}, res2, () => {});\n  if (res2._status !== 500 || res2._body.error !== 'Internal Server Error') throw new Error('Failed fallback 500 check');\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "express-cors-header",
+    "title": "Set CORS Header",
+    "category": "express",
+    "difficulty": "Medium",
+    "description": "## Set CORS Header\n\nExport a middleware `allowCors(req, res, next)`.\n\nIt must use `res.setHeader()` to set `'Access-Control-Allow-Origin'` to `'*'` and then call `next()`.",
+    "starterCode": "function allowCors(req, res, next) {\n  // your code here\n}\n\nmodule.exports = { allowCors };\n",
+    "hiddenTestCode": "\ntry {\n  const { allowCors } = module.exports;\n  let headers = {};\n  let nextCalled = false;\n  const res = { setHeader(k, v) { headers[k.toLowerCase()] = v; } };\n  allowCors({}, res, () => { nextCalled = true; });\n  if (headers['access-control-allow-origin'] !== '*') throw new Error('CORS header not set to *');\n  if (!nextCalled) throw new Error('next() not called');\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "express-count-keys",
+    "title": "Count Body Keys",
+    "category": "express",
+    "difficulty": "Medium",
+    "description": "## Count Body Keys\n\nExport a middleware `countKeys(req, res, next)`.\n\n- It must count the number of top-level keys in the `req.body` object.\n- Assign this number to `req.bodyKeyCount`.\n- Call `next()`.\n- If `req.body` is undefined, default the count to `0`.",
+    "starterCode": "function countKeys(req, res, next) {\n  // your code here\n}\n\nmodule.exports = { countKeys };\n",
+    "hiddenTestCode": "\ntry {\n  const { countKeys } = module.exports;\n  let req1 = { body: { a: 1, b: 2 } };\n  countKeys(req1, {}, () => {});\n  if (req1.bodyKeyCount !== 2) throw new Error('Failed to count keys correctly. Expected 2, got ' + req1.bodyKeyCount);\n  let req2 = {};\n  countKeys(req2, {}, () => {});\n  if (req2.bodyKeyCount !== 0) throw new Error('Failed to handle missing req.body object');\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  }
+]

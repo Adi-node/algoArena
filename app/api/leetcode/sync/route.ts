@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { getRecentSubmissions, getQuestionDetail } from "@/lib/leetcode";
+import { getRecentSubmissions, getQuestionDetail, leetcodeUserTag } from "@/lib/leetcode";
 import type { Difficulty } from "@/app/generated/prisma/client";
 
 function mapDifficulty(d: string): Difficulty {
@@ -70,5 +71,6 @@ export async function POST(req: NextRequest) {
     synced++;
   }
 
+  revalidateTag(leetcodeUserTag(user.leetcodeUsername), "max");
   return NextResponse.json({ synced });
 }

@@ -1,0 +1,155 @@
+[
+  {
+    "id": "node-emitter-counter",
+    "title": "EventEmitter Counter",
+    "category": "node",
+    "difficulty": "Easy",
+    "description": "## EventEmitter Counter\n\nExport a function `makeCounter()` that returns an instance of Node's `EventEmitter`. It should also expose an `increment()` method on the emitter instance which increases an internal count by 1 and emits a `'change'` event with the new count.\n\n**Signature**\n```js\nfunction makeCounter() { /* returns emitter with .increment() */ }\n```",
+    "starterCode": "const { EventEmitter } = require('events');\n\nfunction makeCounter() {\n  // your code here\n}\n\nmodule.exports = { makeCounter };\n",
+    "hiddenTestCode": "\ntry {\n  const { makeCounter } = module.exports;\n  const c = makeCounter();\n  const seen = [];\n  c.on('change', (n) => seen.push(n));\n  c.increment();\n  c.increment();\n  c.increment();\n  if (seen.length !== 3) throw new Error('expected 3 events, got ' + seen.length);\n  if (seen[0] !== 1 || seen[1] !== 2 || seen[2] !== 3) throw new Error('wrong sequence: ' + JSON.stringify(seen));\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "node-delay",
+    "title": "Promisified delay",
+    "category": "node",
+    "difficulty": "Easy",
+    "description": "## Promisified `delay`\n\nWrite a function `delay(ms)` that returns a Promise which resolves to the string `'done'` after `ms` milliseconds. Use `setTimeout` internally.",
+    "starterCode": "function delay(ms) {\n  // your code here\n}\n\nmodule.exports = { delay };\n",
+    "hiddenTestCode": "\n;(async () => {\n  try {\n    const { delay } = module.exports;\n    const start = Date.now();\n    const result = await delay(40);\n    const elapsed = Date.now() - start;\n    if (result !== 'done') throw new Error('expected \"done\", got ' + result);\n    if (elapsed < 35) throw new Error('resolved too fast: ' + elapsed + 'ms');\n    console.log('__TEST_PASSED__');\n  } catch (e) {\n    console.log('TEST FAILED:', e.message);\n  }\n})();\n"
+  },
+  {
+    "id": "node-path-join",
+    "title": "Join File Paths",
+    "category": "node",
+    "difficulty": "Easy",
+    "description": "## Join File Paths\n\nExport a function `buildPath(parts)` that takes an array of string path segments and joins them safely using Node's built-in `path` module. It should automatically normalize the resulting path (e.g., resolving `..` segments).",
+    "starterCode": "const path = require('path');\n\nfunction buildPath(parts) {\n  // your code here\n}\n\nmodule.exports = { buildPath };\n",
+    "hiddenTestCode": "\ntry {\n  const { buildPath } = module.exports;\n  const res = buildPath(['/users', 'test', '..', 'admin', 'data.json']);\n  const expected = require('path').join('/users', 'test', '..', 'admin', 'data.json');\n  if (res !== expected) throw new Error('Expected ' + expected + ', got ' + res);\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "node-env-fallback",
+    "title": "Environment Variable Fallback",
+    "category": "node",
+    "difficulty": "Easy",
+    "description": "## Environment Variable Fallback\n\nExport a function `getEnv(key, fallback)` that checks `process.env` for the specified `key`.\n\n- If the key exists, return its value.\n- If the key does not exist, return the `fallback` value.",
+    "starterCode": "function getEnv(key, fallback) {\n  // your code here\n}\n\nmodule.exports = { getEnv };\n",
+    "hiddenTestCode": "\ntry {\n  const { getEnv } = module.exports;\n  process.env.TEST_API_KEY = 'secret123';\n  const r1 = getEnv('TEST_API_KEY', 'default');\n  if (r1 !== 'secret123') throw new Error('Failed to read existing env var');\n  const r2 = getEnv('MISSING_KEY', 'fallback_value');\n  if (r2 !== 'fallback_value') throw new Error('Failed to return fallback');\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "node-buffer-base64",
+    "title": "String to Base64",
+    "category": "node",
+    "difficulty": "Easy",
+    "description": "## String to Base64\n\nExport a function `toBase64(str)` that takes a standard UTF-8 string and returns its Base64 encoded equivalent using Node's `Buffer` class.",
+    "starterCode": "function toBase64(str) {\n  // your code here\n}\n\nmodule.exports = { toBase64 };\n",
+    "hiddenTestCode": "\ntry {\n  const { toBase64 } = module.exports;\n  const res = toBase64('hello world');\n  if (res !== 'aGVsbG8gd29ybGQ=') throw new Error('Base64 encoding failed, got ' + res);\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "node-crypto-hash",
+    "title": "Hash a Password",
+    "category": "node",
+    "difficulty": "Medium",
+    "description": "## Hash a Password\n\nExport a function `hashPassword(password)` that uses Node's `crypto` module to generate a `sha256` hash of the given password.\n\nThe function must return the hash as a hex string.",
+    "starterCode": "const crypto = require('crypto');\n\nfunction hashPassword(password) {\n  // your code here\n}\n\nmodule.exports = { hashPassword };\n",
+    "hiddenTestCode": "\ntry {\n  const { hashPassword } = module.exports;\n  const res = hashPassword('mySecret');\n  const expected = require('crypto').createHash('sha256').update('mySecret').digest('hex');\n  if (res !== expected) throw new Error('Hash does not match expected sha256 hex');\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "node-parse-url",
+    "title": "Parse URL Object",
+    "category": "node",
+    "difficulty": "Medium",
+    "description": "## Parse URL Object\n\nExport a function `extractUrlData(urlString)` that parses a full URL string.\n\nIt must return an object with two properties:\n- `hostname`: The domain name (e.g., `'api.example.com'`)\n- `protocol`: The protocol (e.g., `'https:'`)",
+    "starterCode": "function extractUrlData(urlString) {\n  // your code here\n}\n\nmodule.exports = { extractUrlData };\n",
+    "hiddenTestCode": "\ntry {\n  const { extractUrlData } = module.exports;\n  const res = extractUrlData('https://api.github.com/users?name=test');\n  if (!res || res.hostname !== 'api.github.com') throw new Error('Incorrect hostname');\n  if (res.protocol !== 'https:') throw new Error('Incorrect protocol');\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "node-custom-promisify",
+    "title": "Implement Promisify",
+    "category": "node",
+    "difficulty": "Hard",
+    "description": "## Implement Promisify\n\nExport a function `myPromisify(fn)` that converts a standard Node.js callback-style function `(arg, callback)` into a function that returns a Promise.\n\nThe callback follows the Node standard: `callback(error, result)`.",
+    "starterCode": "function myPromisify(fn) {\n  // your code here\n}\n\nmodule.exports = { myPromisify };\n",
+    "hiddenTestCode": "\n;(async () => {\n  try {\n    const { myPromisify } = module.exports;\n    const successFn = (arg, cb) => cb(null, arg * 2);\n    const errorFn = (arg, cb) => cb(new Error('Crash'), null);\n    const pSuccess = myPromisify(successFn);\n    const pError = myPromisify(errorFn);\n    const res = await pSuccess(10);\n    if (res !== 20) throw new Error('Promise did not resolve with correct value');\n    let caught = false;\n    try { await pError(10); } catch (err) { caught = true; if (err.message !== 'Crash') throw new Error('Rejected with wrong error'); }\n    if (!caught) throw new Error('Did not reject on error');\n    console.log('__TEST_PASSED__');\n  } catch (e) {\n    console.log('TEST FAILED:', e.message);\n  }\n})();\n"
+  },
+  {
+    "id": "node-stream-consumer",
+    "title": "Stream to String",
+    "category": "node",
+    "difficulty": "Hard",
+    "description": "## Stream to String\n\nExport an async function `streamToString(readableStream)` that reads all chunks from a Node.js `Readable` stream, concatenates them, and resolves the Promise with the final string.\n\nListen for the `'data'`, `'end'`, and `'error'` events.",
+    "starterCode": "function streamToString(stream) {\n  // your code here\n  return new Promise((resolve, reject) => {\n\n  });\n}\n\nmodule.exports = { streamToString };\n",
+    "hiddenTestCode": "\n;(async () => {\n  try {\n    const { streamToString } = module.exports;\n    const { Readable } = require('stream');\n    const stream = Readable.from(['Hello ', 'Node ', 'Streams']);\n    const res = await streamToString(stream);\n    if (res !== 'Hello Node Streams') throw new Error('Stream chunks not concatenated correctly. Got: ' + res);\n    console.log('__TEST_PASSED__');\n  } catch (e) {\n    console.log('TEST FAILED:', e.message);\n  }\n})();\n"
+  },
+  {
+    "id": "node-cli-parser",
+    "title": "Parse CLI Arguments",
+    "category": "node",
+    "difficulty": "Medium",
+    "description": "## Parse CLI Arguments\n\nExport a function `parseArgs(argv)` that takes an array of command line arguments (like `process.argv.slice(2)`).\n\nIf it encounters an argument starting with `--` (like `--name`), it should store the *next* argument as its value in an object. \nExample: `['--name', 'Alice', '--port', '8080']` -> `{ name: 'Alice', port: '8080' }`.",
+    "starterCode": "function parseArgs(argv) {\n  // your code here\n}\n\nmodule.exports = { parseArgs };\n",
+    "hiddenTestCode": "\ntry {\n  const { parseArgs } = module.exports;\n  const res = parseArgs(['--env', 'prod', '--retries', '3']);\n  if (!res || res.env !== 'prod' || res.retries !== '3') throw new Error('Failed to parse correctly. Got: ' + JSON.stringify(res));\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "node-temp-file",
+    "title": "Async File Write",
+    "category": "node",
+    "difficulty": "Medium",
+    "description": "## Async File Write\n\nExport an async function `writeLog(filename, data)` that uses the `fs/promises` module to write the `data` string to the specified `filename`.\n\nEnsure it awaits the write operation before returning.",
+    "starterCode": "const fs = require('fs/promises');\n\nasync function writeLog(filename, data) {\n  // your code here\n}\n\nmodule.exports = { writeLog };\n",
+    "hiddenTestCode": "\n;(async () => {\n  try {\n    const { writeLog } = module.exports;\n    const fs = require('fs/promises');\n    const os = require('os');\n    const path = require('path');\n    const file = path.join(os.tmpdir(), 'test_log_' + Date.now() + '.txt');\n    await writeLog(file, 'log_success');\n    const content = await fs.readFile(file, 'utf-8');\n    if (content !== 'log_success') throw new Error('File content mismatch. Got: ' + content);\n    console.log('__TEST_PASSED__');\n  } catch (e) {\n    console.log('TEST FAILED:', e.message);\n  }\n})();\n"
+  },
+  {
+    "id": "node-os-specs",
+    "title": "OS Specifications",
+    "category": "node",
+    "difficulty": "Easy",
+    "description": "## OS Specifications\n\nExport a function `getSpecs()` that uses Node's `os` module to return an object with two properties:\n- `memory`: Total system memory in bytes.\n- `cores`: The number of CPU cores available.",
+    "starterCode": "const os = require('os');\n\nfunction getSpecs() {\n  // your code here\n}\n\nmodule.exports = { getSpecs };\n",
+    "hiddenTestCode": "\ntry {\n  const { getSpecs } = module.exports;\n  const res = getSpecs();\n  if (typeof res.memory !== 'number' || res.memory <= 0) throw new Error('memory property is missing or invalid');\n  if (typeof res.cores !== 'number' || res.cores <= 0) throw new Error('cores property is missing or invalid');\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "node-buffer-concat",
+    "title": "Concatenate Buffers",
+    "category": "node",
+    "difficulty": "Easy",
+    "description": "## Concatenate Buffers\n\nExport a function `joinBuffers(buf1, buf2)` that takes two Buffer objects and returns a single new Buffer that combines them sequentially.",
+    "starterCode": "function joinBuffers(buf1, buf2) {\n  // your code here\n}\n\nmodule.exports = { joinBuffers };\n",
+    "hiddenTestCode": "\ntry {\n  const { joinBuffers } = module.exports;\n  const b1 = Buffer.from('hello ');\n  const b2 = Buffer.from('world');\n  const res = joinBuffers(b1, b2);\n  if (!Buffer.isBuffer(res)) throw new Error('Did not return a Buffer');\n  if (res.toString() !== 'hello world') throw new Error('Concatenation failed, got: ' + res.toString());\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "node-event-once",
+    "title": "Listen Once",
+    "category": "node",
+    "difficulty": "Easy",
+    "description": "## Listen Once\n\nExport a function `captureFirstEvent(emitter, eventName, callback)`.\n\nIt should attach the `callback` to the given `emitter` for the `eventName`, but ensure the callback is only ever executed **once**, even if the emitter fires the event multiple times.",
+    "starterCode": "function captureFirstEvent(emitter, eventName, callback) {\n  // your code here\n}\n\nmodule.exports = { captureFirstEvent };\n",
+    "hiddenTestCode": "\ntry {\n  const { captureFirstEvent } = module.exports;\n  const { EventEmitter } = require('events');\n  const em = new EventEmitter();\n  let count = 0;\n  captureFirstEvent(em, 'ping', () => count++);\n  em.emit('ping');\n  em.emit('ping');\n  em.emit('ping');\n  if (count !== 1) throw new Error('Callback was executed ' + count + ' times instead of 1');\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "node-url-search-params",
+    "title": "Modify Search Params",
+    "category": "node",
+    "difficulty": "Medium",
+    "description": "## Modify Search Params\n\nExport a function `addUtmTags(urlString)` that takes a URL string, appends `?utm_source=test` to the query parameters, and returns the updated full URL string.\n\nUse the global `URL` class and its `.searchParams` property.",
+    "starterCode": "function addUtmTags(urlString) {\n  // your code here\n}\n\nmodule.exports = { addUtmTags };\n",
+    "hiddenTestCode": "\ntry {\n  const { addUtmTags } = module.exports;\n  const r1 = addUtmTags('https://site.com/path');\n  if (r1 !== 'https://site.com/path?utm_source=test') throw new Error('Failed on URL without query params. Got: ' + r1);\n  const r2 = addUtmTags('https://site.com/?ref=123');\n  if (r2 !== 'https://site.com/?ref=123&utm_source=test') throw new Error('Failed on URL with existing query params. Got: ' + r2);\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "node-sequential-async",
+    "title": "Sequential Async Runner",
+    "category": "node",
+    "difficulty": "Hard",
+    "description": "## Sequential Async Runner\n\nExport an async function `runInSequence(asyncFns)` that takes an array of asynchronous functions. It must execute them one by one in order, waiting for each to finish before starting the next.\n\nReturn an array of their resolved results.",
+    "starterCode": "async function runInSequence(asyncFns) {\n  // your code here\n}\n\nmodule.exports = { runInSequence };\n",
+    "hiddenTestCode": "\n;(async () => {\n  try {\n    const { runInSequence } = module.exports;\n    let active = 0;\n    const makeTask = (val, ms) => async () => {\n      active++;\n      if (active > 1) throw new Error('Tasks are running in parallel!');\n      await new Promise(r => setTimeout(r, ms));\n      active--;\n      return val;\n    };\n    const res = await runInSequence([makeTask(1, 20), makeTask(2, 10), makeTask(3, 5)]);\n    if (res.join(',') !== '1,2,3') throw new Error('Results array is incorrect: ' + res);\n    console.log('__TEST_PASSED__');\n  } catch (e) {\n    console.log('TEST FAILED:', e.message);\n  }\n})();\n"
+  },
+  {
+    "id": "node-exec-timer",
+    "title": "Execution Timer",
+    "category": "node",
+    "difficulty": "Medium",
+    "description": "## Execution Timer\n\nExport a function `timeIt(fn)` that measures exactly how long a synchronous function `fn` takes to execute.\n\nReturn the time elapsed in milliseconds (you can use `Date.now()` or `process.hrtime()`).",
+    "starterCode": "function timeIt(fn) {\n  // your code here\n}\n\nmodule.exports = { timeIt };\n",
+    "hiddenTestCode": "\ntry {\n  const { timeIt } = module.exports;\n  const heavyMath = () => {\n    let sum = 0;\n    for(let i = 0; i < 5000000; i++) sum += i;\n    return sum;\n  };\n  const ms = timeIt(heavyMath);\n  if (typeof ms !== 'number' || ms < 0) throw new Error('Did not return a valid elapsed time number. Got: ' + ms);\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  }
+]

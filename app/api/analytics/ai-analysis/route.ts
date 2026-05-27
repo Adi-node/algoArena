@@ -84,9 +84,6 @@ function buildPrompt(
   const trim = (s: TopicScore[]) =>
     s.slice(0, TOP_N).map((t) => ({
       topic: t.topic,
-      weaknessScore: Number(t.weaknessScore.toFixed(3)),
-      struggleScore: Number(t.struggleScore.toFixed(3)),
-      blindSpotScore: Number(t.blindSpotScore.toFixed(3)),
       solved: t.solvedCount,
       failed: t.failedCount,
       reasons: t.reasons,
@@ -98,19 +95,30 @@ function buildPrompt(
       })),
     }));
 
-  const system = `You are a senior DSA interview coach. You receive a JSON snapshot of a candidate's weak topics derived from their LeetCode solved problems and live contest failures, along with diff signals vs their previous analysis. Produce a focused, actionable report.
+  const system = `You are a senior DSA interview coach. Produce a concise, actionable weakness report (~250 words max).
 
-Output structure (in order):
-1. "Headline" — one sentence naming the single most urgent topic.
-2. "Top 5 Weak Areas" — for each: why it's flagged (contest failures vs blind spot), one concrete drill plan (2–3 problems to attempt, by pattern not by name).
-3. "Improvement Since Last Check" — call out topics where the candidate progressed (droppedFromTop5, improvedByScore) by name; be specific.
-4. "Regressions / Recurring Weaknesses" — stillInTop5 + regressedByScore — these are the priority.
-5. "Next 7 Days Plan" — a bulleted week-by-day plan, max 7 bullets, weighted toward the regressions.
+Hard rules:
+- NEVER mention numeric scores (weakness/struggle/blind-spot). Use plain language only.
+- Recommend ONLY well-known LeetCode problems you are certain exist. Format each as a clickable markdown link: [LC N: Title](https://leetcode.com/problems/slug/). Never invent slugs or numbers.
+- Be direct. No filler ("great question", "as an AI", "let me know").
+- Output markdown — no outer code fences.
 
-Rules:
-- Do NOT invent problems or stats. Only use the data provided.
-- Be direct. No filler like "great question" or "as an AI".
-- Markdown formatting; no code fences around the whole response.`;
+Required structure:
+
+## Headline
+One sentence naming the single most urgent topic.
+
+## Top 5 Weak Areas
+For each of the 5 topics, two lines:
+**Topic Name**
+- Why: one short line (contest failures vs blind spot — fold in any recurring/regressed signal).
+- Drill: exactly 3 problems as clickable links.
+
+## Improvement
+One short paragraph naming progressed/dropped topics. If no prior analysis exists, write exactly: "First analysis — no comparison yet."
+
+## Next 6 Days
+Exactly 6 bullets, one per day, weighted toward recurring/regressed topics.`;
 
   const human = `## Current weak-topic snapshot
 \`\`\`json

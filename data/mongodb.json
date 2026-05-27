@@ -1,0 +1,155 @@
+[
+  {
+    "id": "mongo-active-filter",
+    "title": "Build active-users filter",
+    "category": "mongodb",
+    "difficulty": "Easy",
+    "description": "## Build an active-users filter\n\nExport a function `activeFilter(minAge)` that returns a MongoDB filter object selecting users where:\n\n- `status` equals `'active'`\n- `age` is greater-than-or-equal to `minAge` (use the `$gte` operator)\n\nReturn the filter as a plain JS object — do not call any DB driver.",
+    "starterCode": "function activeFilter(minAge) {\n  // your code here\n}\n\nmodule.exports = { activeFilter };\n",
+    "hiddenTestCode": "\ntry {\n  const { activeFilter } = module.exports;\n  const f = activeFilter(18);\n  if (!f || typeof f !== 'object') throw new Error('did not return object');\n  if (f.status !== 'active') throw new Error('status not set to active');\n  if (!f.age || f.age.$gte !== 18) throw new Error('age $gte 18 missing, got ' + JSON.stringify(f.age));\n  const f2 = activeFilter(40);\n  if (!f2.age || f2.age.$gte !== 40) throw new Error('minAge not applied: ' + JSON.stringify(f2.age));\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "mongo-group-pipeline",
+    "title": "Group-by-category pipeline",
+    "category": "mongodb",
+    "difficulty": "Medium",
+    "description": "## Group-by-category aggregation\n\nExport a function `countByCategory()` that returns a MongoDB aggregation pipeline (an array) which:\n\n1. Matches documents where `inStock` is `true`.\n2. Groups by `category`, accumulating a `count` field with `$sum: 1`.\n3. Sorts results by `count` descending.\n\nReturn only the pipeline; do not execute anything.",
+    "starterCode": "function countByCategory() {\n  // your code here\n}\n\nmodule.exports = { countByCategory };\n",
+    "hiddenTestCode": "\ntry {\n  const { countByCategory } = module.exports;\n  const p = countByCategory();\n  if (!Array.isArray(p)) throw new Error('pipeline must be an array');\n  if (p.length !== 3) throw new Error('expected 3 stages, got ' + p.length);\n  if (!p[0].$match || p[0].$match.inStock !== true) throw new Error('stage 1 must be $match { inStock: true }');\n  if (!p[1].$group || p[1].$group._id !== '$category') throw new Error('stage 2 must group by $category');\n  const sum = p[1].$group.count;\n  if (!sum || sum.$sum !== 1) throw new Error('stage 2 count must be { $sum: 1 }');\n  if (!p[2].$sort || p[2].$sort.count !== -1) throw new Error('stage 3 must $sort by count desc');\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "mongo-in-operator",
+    "title": "Find by multiple statuses",
+    "category": "mongodb",
+    "difficulty": "Easy",
+    "description": "## Find by multiple statuses\n\nExport a function `findStatuses(statusArray)` that returns a MongoDB filter object.\n\nIt should match documents where the `status` field matches any of the values provided in the `statusArray`. Use the `$in` operator.",
+    "starterCode": "function findStatuses(statusArray) {\n  // your code here\n}\n\nmodule.exports = { findStatuses };\n",
+    "hiddenTestCode": "\ntry {\n  const { findStatuses } = module.exports;\n  const f = findStatuses(['pending', 'shipped']);\n  if (!f || typeof f !== 'object') throw new Error('did not return an object');\n  if (!f.status || !f.status.$in) throw new Error('missing $in operator on status field');\n  if (f.status.$in.join(',') !== 'pending,shipped') throw new Error('array values passed to $in are incorrect');\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "mongo-elem-match",
+    "title": "Match array elements",
+    "category": "mongodb",
+    "difficulty": "Medium",
+    "description": "## Match array elements\n\nExport a function `findHighMathScores()` that returns a MongoDB filter.\n\nWe have a `scores` array containing objects like `{ subject: 'math', score: 85 }`. The filter should match documents where the `scores` array contains AT LEAST ONE element that has `subject` equal to `'math'` AND `score` greater than or equal to `90`.\n\nUse the `$elemMatch` operator.",
+    "starterCode": "function findHighMathScores() {\n  // your code here\n}\n\nmodule.exports = { findHighMathScores };\n",
+    "hiddenTestCode": "\ntry {\n  const { findHighMathScores } = module.exports;\n  const f = findHighMathScores();\n  if (!f || !f.scores || !f.scores.$elemMatch) throw new Error('missing $elemMatch on the scores field');\n  const em = f.scores.$elemMatch;\n  if (em.subject !== 'math') throw new Error('did not match subject: \"math\" inside $elemMatch');\n  if (!em.score || em.score.$gte !== 90) throw new Error('did not include score $gte 90 inside $elemMatch');\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "mongo-or-operator",
+    "title": "Complex OR logic",
+    "category": "mongodb",
+    "difficulty": "Medium",
+    "description": "## Complex OR logic\n\nExport a function `premiumOrAdmin()` that returns a filter object.\n\nIt should match documents where EITHER:\n- `role` is `'admin'`\n- `subscription` is `'premium'`\n\nUse the top-level `$or` operator.",
+    "starterCode": "function premiumOrAdmin() {\n  // your code here\n}\n\nmodule.exports = { premiumOrAdmin };\n",
+    "hiddenTestCode": "\ntry {\n  const { premiumOrAdmin } = module.exports;\n  const f = premiumOrAdmin();\n  if (!f || !Array.isArray(f.$or)) throw new Error('must use top-level $or array');\n  if (f.$or.length !== 2) throw new Error('expected exactly 2 conditions in $or array');\n  const hasAdmin = f.$or.some(c => c.role === 'admin');\n  const hasPremium = f.$or.some(c => c.subscription === 'premium');\n  if (!hasAdmin || !hasPremium) throw new Error('conditions inside $or are incorrect');\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "mongo-regex-search",
+    "title": "Regex Search",
+    "category": "mongodb",
+    "difficulty": "Easy",
+    "description": "## Regex Search\n\nExport a function `searchName(keyword)` that returns a MongoDB filter object to search the `name` field.\n\nUse the `$regex` operator with the provided keyword, and add the `$options: 'i'` flag to make the search case-insensitive.",
+    "starterCode": "function searchName(keyword) {\n  // your code here\n}\n\nmodule.exports = { searchName };\n",
+    "hiddenTestCode": "\ntry {\n  const { searchName } = module.exports;\n  const f = searchName('john');\n  if (!f || !f.name) throw new Error('must apply filter to name field');\n  if (f.name.$regex !== 'john') throw new Error('missing or incorrect $regex operator');\n  if (f.name.$options !== 'i') throw new Error('missing case-insensitive $options flag');\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "mongo-exists-type",
+    "title": "Check field existence",
+    "category": "mongodb",
+    "difficulty": "Easy",
+    "description": "## Check field existence\n\nExport a function `validPhoneFilter()` that returns a MongoDB filter.\n\nIt should match documents where the `phoneNumber` field BOTH exists (using `$exists: true`) AND is of type string (using `$type: 'string'`).",
+    "starterCode": "function validPhoneFilter() {\n  // your code here\n}\n\nmodule.exports = { validPhoneFilter };\n",
+    "hiddenTestCode": "\ntry {\n  const { validPhoneFilter } = module.exports;\n  const f = validPhoneFilter();\n  if (!f || !f.phoneNumber) throw new Error('filter must target phoneNumber field');\n  if (f.phoneNumber.$exists !== true) throw new Error('missing $exists: true');\n  if (f.phoneNumber.$type !== 'string') throw new Error('missing $type: \"string\"');\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "mongo-basic-update",
+    "title": "Set and Increment",
+    "category": "mongodb",
+    "difficulty": "Easy",
+    "description": "## Set and Increment\n\nExport a function `updateProfile()` that returns a MongoDB update document.\n\nIt should:\n- Increment the `views` field by `1` (use `$inc`).\n- Set the `lastUpdated` field to the string `'today'` (use `$set`).",
+    "starterCode": "function updateProfile() {\n  // your code here\n}\n\nmodule.exports = { updateProfile };\n",
+    "hiddenTestCode": "\ntry {\n  const { updateProfile } = module.exports;\n  const u = updateProfile();\n  if (!u || !u.$inc || u.$inc.views !== 1) throw new Error('missing or incorrect $inc on views field');\n  if (!u.$set || u.$set.lastUpdated !== 'today') throw new Error('missing or incorrect $set on lastUpdated field');\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "mongo-array-push",
+    "title": "Push to array",
+    "category": "mongodb",
+    "difficulty": "Easy",
+    "description": "## Push to array\n\nExport a function `addTag(tag)` that returns an update document.\n\nIt should append the provided `tag` to the `tags` array using the `$push` operator.",
+    "starterCode": "function addTag(tag) {\n  // your code here\n}\n\nmodule.exports = { addTag };\n",
+    "hiddenTestCode": "\ntry {\n  const { addTag } = module.exports;\n  const u = addTag('javascript');\n  if (!u || !u.$push) throw new Error('must use $push operator');\n  if (u.$push.tags !== 'javascript') throw new Error('must push the provided tag string to the tags array');\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "mongo-array-pull",
+    "title": "Remove from array",
+    "category": "mongodb",
+    "difficulty": "Medium",
+    "description": "## Remove from array\n\nExport a function `removeBadReviews()` that returns an update document.\n\nIt should remove ALL elements from the `reviews` array where the `rating` property is less than `3`. Use the `$pull` operator combined with `$lt`.",
+    "starterCode": "function removeBadReviews() {\n  // your code here\n}\n\nmodule.exports = { removeBadReviews };\n",
+    "hiddenTestCode": "\ntry {\n  const { removeBadReviews } = module.exports;\n  const u = removeBadReviews();\n  if (!u || !u.$pull || !u.$pull.reviews) throw new Error('must use $pull on the reviews array');\n  if (!u.$pull.reviews.rating || u.$pull.reviews.rating.$lt !== 3) throw new Error('pull condition must target rating $lt 3');\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "mongo-upsert-setoninsert",
+    "title": "Upsert Logic",
+    "category": "mongodb",
+    "difficulty": "Medium",
+    "description": "## Upsert Logic\n\nExport a function `upsertUser(email)` that returns an update document designed to be used with an upsert operation.\n\nIt should:\n- `$set` the `email` field to the provided email.\n- `$setOnInsert` the `createdAt` field to the string `'now'` (this ensures it only writes the date if a new document is created).",
+    "starterCode": "function upsertUser(email) {\n  // your code here\n}\n\nmodule.exports = { upsertUser };\n",
+    "hiddenTestCode": "\ntry {\n  const { upsertUser } = module.exports;\n  const u = upsertUser('test@test.com');\n  if (!u || !u.$set || u.$set.email !== 'test@test.com') throw new Error('missing $set for email');\n  if (!u.$setOnInsert || u.$setOnInsert.createdAt !== 'now') throw new Error('missing $setOnInsert for createdAt');\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "mongo-agg-project",
+    "title": "Reshape documents",
+    "category": "mongodb",
+    "difficulty": "Medium",
+    "description": "## Reshape documents\n\nExport a function `formatUsers()` that returns an aggregation pipeline (array) with a single `$project` stage.\n\nThe `$project` stage should:\n- Exclude the `_id` field (set to `0`).\n- Include the `email` field (set to `1`).\n- Create a new field `fullName` using the `$concat` array operator to combine `firstName`, a space `' '`, and `lastName` (e.g. `{ $concat: ['$firstName', ' ', '$lastName'] }`).",
+    "starterCode": "function formatUsers() {\n  // your code here\n}\n\nmodule.exports = { formatUsers };\n",
+    "hiddenTestCode": "\ntry {\n  const { formatUsers } = module.exports;\n  const p = formatUsers();\n  if (!Array.isArray(p) || p.length !== 1) throw new Error('pipeline must be an array with exactly 1 stage');\n  const proj = p[0].$project;\n  if (!proj) throw new Error('stage must be $project');\n  if (proj._id !== 0) throw new Error('must exclude _id field');\n  if (proj.email !== 1) throw new Error('must include email field');\n  if (!proj.fullName || !proj.fullName.$concat) throw new Error('missing $concat for fullName');\n  const c = proj.fullName.$concat;\n  if (c[0] !== '$firstName' || c[1] !== ' ' || c[2] !== '$lastName') throw new Error('concat array is incorrect');\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "mongo-agg-pagination",
+    "title": "Pagination Pipeline",
+    "category": "mongodb",
+    "difficulty": "Easy",
+    "description": "## Pagination Pipeline\n\nExport a function `paginatePipeline(page, limit)` that returns an aggregation pipeline array.\n\nCalculate the `skipAmount` as `(page - 1) * limit`. \nThe pipeline should have two stages in this exact order:\n1. `$skip` by the `skipAmount`.\n2. `$limit` by the `limit` parameter.",
+    "starterCode": "function paginatePipeline(page, limit) {\n  // your code here\n}\n\nmodule.exports = { paginatePipeline };\n",
+    "hiddenTestCode": "\ntry {\n  const { paginatePipeline } = module.exports;\n  const p = paginatePipeline(3, 10);\n  if (!Array.isArray(p) || p.length !== 2) throw new Error('pipeline must have exactly 2 stages');\n  if (p[0].$skip !== 20) throw new Error('stage 1 must be $skip with correct math. Expected 20, got ' + p[0].$skip);\n  if (p[1].$limit !== 10) throw new Error('stage 2 must be $limit 10');\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "mongo-agg-unwind-group",
+    "title": "Unwind and Group",
+    "category": "mongodb",
+    "difficulty": "Hard",
+    "description": "## Unwind and Group\n\nExport a function `tagFrequency()` that returns a pipeline to count how many times each tag appears across all documents.\n\n1. `$unwind` the `tags` array (use the string `'$tags'`).\n2. `$group` by the tag name (set `_id` to `'$tags'`), and accumulate a `count` field using `{ $sum: 1 }`.",
+    "starterCode": "function tagFrequency() {\n  // your code here\n}\n\nmodule.exports = { tagFrequency };\n",
+    "hiddenTestCode": "\ntry {\n  const { tagFrequency } = module.exports;\n  const p = tagFrequency();\n  if (!Array.isArray(p) || p.length !== 2) throw new Error('expected 2 stages');\n  if (p[0].$unwind !== '$tags') throw new Error('stage 1 must unwind $tags');\n  const g = p[1].$group;\n  if (!g) throw new Error('stage 2 must be $group');\n  if (g._id !== '$tags') throw new Error('group _id must be $tags');\n  if (!g.count || g.count.$sum !== 1) throw new Error('count must use $sum: 1');\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "mongo-agg-lookup",
+    "title": "Join Collections",
+    "category": "mongodb",
+    "difficulty": "Medium",
+    "description": "## Join Collections\n\nExport a function `joinUsers()` that returns a single-stage aggregation pipeline to perform a left outer join.\n\nUse the `$lookup` stage to join the current collection with the `users` collection. \n- `from`: `'users'`\n- `localField`: `'authorId'`\n- `foreignField`: `'_id'`\n- `as`: `'authorDetails'`",
+    "starterCode": "function joinUsers() {\n  // your code here\n}\n\nmodule.exports = { joinUsers };\n",
+    "hiddenTestCode": "\ntry {\n  const { joinUsers } = module.exports;\n  const p = joinUsers();\n  if (!Array.isArray(p) || p.length !== 1) throw new Error('expected exactly 1 stage');\n  const l = p[0].$lookup;\n  if (!l) throw new Error('stage must be $lookup');\n  if (l.from !== 'users') throw new Error('from must be \"users\"');\n  if (l.localField !== 'authorId') throw new Error('localField must be \"authorId\"');\n  if (l.foreignField !== '_id') throw new Error('foreignField must be \"_id\"');\n  if (l.as !== 'authorDetails') throw new Error('as must be \"authorDetails\"');\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "mongo-agg-addfields",
+    "title": "Calculate Totals",
+    "category": "mongodb",
+    "difficulty": "Medium",
+    "description": "## Calculate Totals\n\nExport a function `calculateTotals()` that returns a single-stage pipeline.\n\nUse the `$addFields` (or `$set`) stage to create a new field called `totalPrice`. The value should be the result of multiplying the `$price` and `$quantity` fields using the `$multiply` array operator.",
+    "starterCode": "function calculateTotals() {\n  // your code here\n}\n\nmodule.exports = { calculateTotals };\n",
+    "hiddenTestCode": "\ntry {\n  const { calculateTotals } = module.exports;\n  const p = calculateTotals();\n  if (!Array.isArray(p) || p.length !== 1) throw new Error('expected exactly 1 stage');\n  const s = p[0].$addFields || p[0].$set;\n  if (!s) throw new Error('stage must be $addFields or $set');\n  if (!s.totalPrice || !s.totalPrice.$multiply) throw new Error('must define totalPrice using $multiply');\n  const m = s.totalPrice.$multiply;\n  if (!m.includes('$price') || !m.includes('$quantity')) throw new Error('multiply array must contain $price and $quantity');\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "mongo-agg-having",
+    "title": "Group and Filter (Having)",
+    "category": "mongodb",
+    "difficulty": "Hard",
+    "description": "## Group and Filter\n\nExport a function `frequentBuyers()` that returns a 2-stage pipeline.\n\n1. `$group` by `'$userId'` and accumulate a `totalOrders` field using `{ $sum: 1 }`.\n2. `$match` only the grouped results where `totalOrders` is greater than or equal to `5` (use `$gte`).",
+    "starterCode": "function frequentBuyers() {\n  // your code here\n}\n\nmodule.exports = { frequentBuyers };\n",
+    "hiddenTestCode": "\ntry {\n  const { frequentBuyers } = module.exports;\n  const p = frequentBuyers();\n  if (!Array.isArray(p) || p.length !== 2) throw new Error('expected 2 stages');\n  const g = p[0].$group;\n  if (!g || g._id !== '$userId') throw new Error('stage 1 must group by $userId');\n  if (!g.totalOrders || g.totalOrders.$sum !== 1) throw new Error('must sum totalOrders by 1');\n  const m = p[1].$match;\n  if (!m || !m.totalOrders || m.totalOrders.$gte !== 5) throw new Error('stage 2 must $match totalOrders $gte 5');\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  }
+]

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { Icon } from "../../../_ui/icons";
 
 type Difficulty = "EASY" | "MEDIUM" | "HARD";
 type ContestStatus = "ACTIVE" | "COMPLETED" | "ABANDONED";
@@ -26,11 +27,11 @@ interface Props {
   leetcodeUsername: string | null;
 }
 
-function difficultyColor(d: Difficulty) {
-  if (d === "EASY") return "text-green-400";
-  if (d === "MEDIUM") return "text-yellow-400";
-  return "text-red-400";
-}
+const diffLetter: Record<Difficulty, "E" | "M" | "H"> = {
+  EASY: "E",
+  MEDIUM: "M",
+  HARD: "H",
+};
 
 function formatTime(seconds: number) {
   const m = Math.floor(seconds / 60).toString().padStart(2, "0");
@@ -90,8 +91,6 @@ export default function ContestRoom({
     }
   }
 
-  // Auto-fire end route once when the timer hits 0 so the contest transitions to COMPLETED
-  // without requiring a user click. Server returns COMPLETED because elapsed >= duration.
   useEffect(() => {
     if (currentStatus !== "ACTIVE" || timeLeft > 0) return;
     let cancelled = false;
@@ -108,144 +107,127 @@ export default function ContestRoom({
   const isActive = currentStatus === "ACTIVE";
   const isExpired = timeLeft === 0 && isActive;
 
-  // ── Completed (AK or partial) ────────────────────────────────────────────────
+  // ── Completed ───────────────────────────────────────────────────────────
   if (currentStatus === "COMPLETED") {
     const isAK = solvedCount === questions.length;
     return (
-      <div className="space-y-6">
-        {isAK ? (
-          <div className="rounded-2xl border border-yellow-500/30 bg-yellow-500/5 p-6 flex items-center gap-4">
-            <div className="w-10 h-10 rounded-full bg-yellow-500/10 flex items-center justify-center flex-shrink-0">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#facc15" strokeWidth="2">
-                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-              </svg>
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-yellow-300">AK — All Solved!</p>
-              <p className="text-xs text-[#737373]">
-                You solved all {questions.length} problem{questions.length !== 1 ? "s" : ""}. Perfect run.
-              </p>
-            </div>
-          </div>
-        ) : (
-          <div className="rounded-2xl border border-indigo-500/20 bg-indigo-500/5 p-6 flex items-center gap-4">
-            <div className="w-10 h-10 rounded-full bg-indigo-500/10 flex items-center justify-center flex-shrink-0">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#818cf8" strokeWidth="2">
-                <circle cx="12" cy="12" r="10" />
-                <polyline points="12 6 12 12 16 14" />
-              </svg>
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-white">Contest Completed</p>
-              <p className="text-xs text-[#737373]">
-                Time&apos;s up — you solved {solvedCount} of {questions.length}.
-              </p>
-            </div>
-          </div>
-        )}
-        <QuestionList questions={questions} />
-        <Link
-          href="/dashboard/contest"
-          className="block w-full py-2.5 rounded-xl border border-[#2f2f2f] text-[#a3a3a3] hover:text-white text-sm text-center transition-colors"
-        >
-          New Contest
-        </Link>
-      </div>
-    );
-  }
-
-  // ── Terminated (DB status: ABANDONED) ────────────────────────────────────────
-  if (currentStatus === "ABANDONED") {
-    return (
-      <div className="space-y-6">
-        <div className="rounded-2xl border border-red-500/20 bg-red-500/5 p-6 flex items-center gap-4">
-          <div className="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center flex-shrink-0">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="2">
-              <rect x="6" y="6" width="12" height="12" rx="1" />
-            </svg>
+      <div className="aa-section">
+        <header className="aa-page-head" style={{ marginBottom: 8 }}>
+          <h1>Contest result</h1>
+        </header>
+        <div className={"aa-banner " + (isAK ? "warn" : "info")} style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <div className={"aa-feature-icon " + (isAK ? "yellow" : "")} style={{ width: 38, height: 38 }}>
+            {isAK ? Icon.star() : Icon.check()}
           </div>
           <div>
-            <p className="text-sm font-semibold text-white">Contest Terminated</p>
-            <p className="text-xs text-[#737373]">
-              {solvedCount} of {questions.length} solved before stop.
-            </p>
+            <div style={{ color: "var(--rc-ink)", fontWeight: 500, fontSize: 14 }}>
+              {isAK ? "AK — All solved!" : "Contest completed"}
+            </div>
+            <div style={{ color: "var(--rc-on-dark-mute)", fontSize: 13 }}>
+              {isAK
+                ? `You solved all ${questions.length} problem${questions.length !== 1 ? "s" : ""}. Perfect run.`
+                : `Time's up — you solved ${solvedCount} of ${questions.length}.`}
+            </div>
           </div>
         </div>
         <QuestionList questions={questions} />
-        <Link
-          href="/dashboard/contest"
-          className="block w-full py-2.5 rounded-xl border border-[#2f2f2f] text-[#a3a3a3] hover:text-white text-sm text-center transition-colors"
-        >
-          New Contest
+        <Link href="/dashboard/contest" className="aa-btn aa-btn-tertiary" style={{ width: "100%" }}>
+          New contest
         </Link>
       </div>
     );
   }
 
-  // ── Active ────────────────────────────────────────────────────────────────────
-  return (
-    <div className="space-y-6">
-      {/* Header: timer + progress */}
-      <div className="rounded-2xl border border-[#1f1f1f] bg-[#111111] p-6 flex items-center justify-between">
-        <div>
-          <p className="text-xs text-[#737373] mb-1 font-medium uppercase tracking-wider">
-            {isExpired ? "Time's up" : "Time remaining"}
-          </p>
-          <p className={`text-3xl font-mono font-bold ${isExpired ? "text-red-400" : "text-white"}`}>
-            {formatTime(timeLeft)}
-          </p>
+  // ── Terminated ──────────────────────────────────────────────────────────
+  if (currentStatus === "ABANDONED") {
+    return (
+      <div className="aa-section">
+        <header className="aa-page-head" style={{ marginBottom: 8 }}>
+          <h1>Contest terminated</h1>
+        </header>
+        <div className="aa-banner err" style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <div className="aa-feature-icon red" style={{ width: 38, height: 38 }}>{Icon.stop()}</div>
+          <div>
+            <div style={{ color: "var(--rc-ink)", fontWeight: 500, fontSize: 14 }}>Contest terminated</div>
+            <div style={{ color: "var(--rc-on-dark-mute)", fontSize: 13 }}>
+              {solvedCount} of {questions.length} solved before stop.
+            </div>
+          </div>
         </div>
-        <div className="text-right">
-          <p className="text-xs text-[#737373] mb-1 font-medium uppercase tracking-wider">Progress</p>
-          <p className="text-3xl font-bold text-indigo-400">
+        <QuestionList questions={questions} />
+        <Link href="/dashboard/contest" className="aa-btn aa-btn-tertiary" style={{ width: "100%" }}>
+          New contest
+        </Link>
+      </div>
+    );
+  }
+
+  // ── Active ──────────────────────────────────────────────────────────────
+  return (
+    <div className="aa-section">
+      <header className="aa-page-head" style={{ marginBottom: 8 }}>
+        <h1>Contest in progress</h1>
+        <p className="sub">Sync your progress to LeetCode periodically.</p>
+      </header>
+
+      <div className="aa-card" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 24 }}>
+        <div>
+          <div className="aa-card-eyebrow" style={{ marginBottom: 6 }}>
+            {isExpired ? "Time's up" : "Time remaining"}
+          </div>
+          <div
+            style={{
+              fontFamily: "var(--rc-font-mono)",
+              fontSize: 36,
+              fontWeight: 600,
+              color: isExpired ? "var(--rc-red)" : "var(--rc-ink)",
+              fontFeatureSettings: '"tnum"',
+              lineHeight: 1,
+            }}
+          >
+            {formatTime(timeLeft)}
+          </div>
+        </div>
+        <div style={{ textAlign: "right" }}>
+          <div className="aa-card-eyebrow" style={{ marginBottom: 6 }}>Progress</div>
+          <div style={{ fontSize: 36, fontWeight: 600, color: "var(--rc-ink)", lineHeight: 1, fontFeatureSettings: '"tnum"' }}>
             {solvedCount}
-            <span className="text-lg text-[#4a4a4a]">/{questions.length}</span>
-          </p>
+            <span style={{ fontSize: 20, color: "var(--rc-stone)" }}>/{questions.length}</span>
+          </div>
         </div>
       </div>
 
-      {/* Question list */}
       <QuestionList questions={questions} />
 
-      {syncError && (
-        <div className="rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3">
-          <p className="text-xs text-red-400">{syncError}</p>
-        </div>
-      )}
+      {syncError && <div className="aa-banner err">{syncError}</div>}
 
       {!leetcodeUsername && (
-        <p className="text-xs text-yellow-400 text-center">
+        <p style={{ color: "var(--rc-yellow)", fontSize: 12, textAlign: "center", margin: 0 }}>
           No LeetCode account linked — sync won&apos;t work.{" "}
-          <Link href="/dashboard/sync" className="underline">Connect it here.</Link>
+          <Link href="/dashboard/sync" style={{ textDecoration: "underline" }}>Connect it here.</Link>
         </p>
       )}
 
-      <p className="text-xs text-[#4a4a4a] text-center">
+      <p style={{ color: "var(--rc-mute)", fontSize: 12, textAlign: "center", margin: 0 }}>
         Sync checks your 50 most recent AC submissions on LeetCode.
       </p>
 
-      {/* Actions */}
-      <div className="flex gap-3">
+      <div style={{ display: "flex", gap: 10 }}>
         <button
           onClick={handleEnd}
           disabled={ending}
-          className="flex-1 py-2.5 rounded-xl border border-[#2f2f2f] text-[#737373] hover:text-white disabled:opacity-40 text-sm transition-colors"
+          className="aa-btn aa-btn-tertiary"
+          style={{ flex: 1, height: 42 }}
         >
           {ending ? "Stopping…" : "Terminate"}
         </button>
         <button
           onClick={handleSync}
           disabled={syncing || isExpired || !leetcodeUsername}
-          className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium transition-colors flex items-center justify-center gap-2"
+          className="aa-btn aa-btn-primary"
+          style={{ flex: 1, height: 42 }}
         >
-          {syncing ? (
-            <>
-              <span className="w-3.5 h-3.5 border border-white/40 border-t-white rounded-full animate-spin" />
-              Syncing…
-            </>
-          ) : (
-            "Sync Progress"
-          )}
+          {syncing ? (<><span className="aa-spin" /> Syncing…</>) : (<>{Icon.refresh()} Sync progress</>)}
         </button>
       </div>
     </div>
@@ -254,36 +236,56 @@ export default function ContestRoom({
 
 function QuestionList({ questions }: { questions: ContestQuestion[] }) {
   return (
-    <div className="rounded-2xl border border-[#1f1f1f] bg-[#111111] divide-y divide-[#1a1a1a]">
-      {questions.map((cq, i) => (
-        <div key={cq.id} className="flex items-center gap-4 p-4">
-          <span className="text-xs text-[#4a4a4a] w-5 text-right flex-shrink-0">{i + 1}</span>
-          <div className="flex-1 min-w-0">
-            <a
-              href={`https://leetcode.com/problems/${cq.question.slug}/`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm text-white hover:text-indigo-400 transition-colors truncate block"
-            >
-              {cq.question.title}
-            </a>
-            <p className={`text-xs mt-0.5 ${difficultyColor(cq.question.difficulty)}`}>
-              {cq.question.difficulty.charAt(0) + cq.question.difficulty.slice(1).toLowerCase()}
-            </p>
+    <div className="aa-q-group">
+      {questions.map((cq, i) => {
+        const letter = diffLetter[cq.question.difficulty];
+        return (
+          <div key={cq.id} className="aa-q-row">
+            <span style={{ color: "var(--rc-stone)", fontSize: 12, width: 20, textAlign: "right", flexShrink: 0, fontFeatureSettings: '"tnum"' }}>
+              {i + 1}
+            </span>
+            <span className={"aa-diff " + letter}>{letter}</span>
+            <div className="title">
+              <a
+                href={`https://leetcode.com/problems/${cq.question.slug}/`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {cq.question.title}
+              </a>
+            </div>
+            <div style={{ flexShrink: 0 }}>
+              {cq.solved ? (
+                <span
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: 22,
+                    height: 22,
+                    borderRadius: 5,
+                    background: "var(--rc-green-soft)",
+                    border: "1px solid rgba(89,212,153,0.3)",
+                    color: "var(--rc-green)",
+                  }}
+                >
+                  {Icon.check()}
+                </span>
+              ) : (
+                <span
+                  style={{
+                    display: "inline-block",
+                    width: 22,
+                    height: 22,
+                    borderRadius: 5,
+                    border: "1px solid var(--rc-hairline)",
+                  }}
+                />
+              )}
+            </div>
           </div>
-          <div className="flex-shrink-0">
-            {cq.solved ? (
-              <div className="w-6 h-6 rounded-full bg-green-500/10 flex items-center justify-center">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2.5">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-              </div>
-            ) : (
-              <div className="w-6 h-6 rounded-full border border-[#2f2f2f]" />
-            )}
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

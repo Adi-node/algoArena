@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { fetchAllSolvedSlugs, getQuestionDetail } from "@/lib/leetcode";
+import { fetchAllSolvedSlugs, getQuestionDetail, leetcodeUserTag } from "@/lib/leetcode";
 import type { Difficulty } from "@/app/generated/prisma/client";
 
 function mapDifficulty(d: string): Difficulty {
@@ -63,6 +64,14 @@ export async function POST(req: NextRequest) {
     } catch {
       // Unique constraint (userId, questionId) — already recorded; skip.
     }
+  }
+
+  const userRecord = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { leetcodeUsername: true },
+  });
+  if (userRecord?.leetcodeUsername) {
+    revalidateTag(leetcodeUserTag(userRecord.leetcodeUsername), "max");
   }
 
   return NextResponse.json({ totalSlugs: slugs.length, added });

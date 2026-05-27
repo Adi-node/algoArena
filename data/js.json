@@ -1,0 +1,182 @@
+[
+  {
+    "id": "js-debounce",
+    "title": "Implement debounce",
+    "category": "js",
+    "difficulty": "Easy",
+    "description": "## Implement `debounce`\n\nWrite a function `debounce(fn, wait)` that returns a debounced version of `fn`. Calling the debounced function repeatedly should only invoke `fn` once, `wait` ms after the last call.\n\n**Signature**\n```js\nfunction debounce(fn, wait) { /* ... */ }\n```\n\nYour debounced function should forward arguments to `fn`.",
+    "starterCode": "function debounce(fn, wait) {\n  // your code here\n}\n\nmodule.exports = { debounce };\n",
+    "hiddenTestCode": "\n;(async () => {\n  try {\n    const { debounce } = module.exports;\n    if (typeof debounce !== 'function') throw new Error('debounce is not exported');\n    let calls = 0;\n    let lastArg = null;\n    const d = debounce((x) => { calls++; lastArg = x; }, 30);\n    d(1); d(2); d(3);\n    await new Promise(r => setTimeout(r, 80));\n    if (calls !== 1) throw new Error('expected 1 call, got ' + calls);\n    if (lastArg !== 3) throw new Error('expected last arg 3, got ' + lastArg);\n    console.log('__TEST_PASSED__');\n  } catch (e) {\n    console.log('TEST FAILED:', e.message);\n  }\n})();\n"
+  },
+  {
+    "id": "js-mymap",
+    "title": "Implement Array.prototype.myMap",
+    "category": "js",
+    "difficulty": "Easy",
+    "description": "## Implement `Array.prototype.myMap`\n\nAdd a `myMap` method to `Array.prototype` that behaves like `Array.prototype.map`: it returns a new array with the callback applied to each element. The callback receives `(value, index, array)`.\n\nDo not use the built-in `.map`.",
+    "starterCode": "Array.prototype.myMap = function (cb) {\n  // your code here\n};\n",
+    "hiddenTestCode": "\ntry {\n  const out = [1, 2, 3].myMap((x, i) => x * 10 + i);\n  if (!Array.isArray(out)) throw new Error('did not return array');\n  if (out.length !== 3) throw new Error('wrong length');\n  if (out[0] !== 10 || out[1] !== 21 || out[2] !== 32) throw new Error('wrong values: ' + JSON.stringify(out));\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "js-myfilter",
+    "title": "Implement Array.prototype.myFilter",
+    "category": "js",
+    "difficulty": "Easy",
+    "description": "## Implement `Array.prototype.myFilter`\n\nAdd a `myFilter` method to `Array.prototype` that behaves exactly like the built-in `Array.prototype.filter`. It should return a new array containing all elements that pass the test implemented by the provided callback.\n\nDo not use the built-in `.filter`.",
+    "starterCode": "Array.prototype.myFilter = function (cb) {\n  // your code here\n};\n",
+    "hiddenTestCode": "\ntry {\n  const out = [1, 2, 3, 4].myFilter(x => x % 2 === 0);\n  if (!Array.isArray(out)) throw new Error('did not return an array');\n  if (out.length !== 2) throw new Error('wrong length, expected 2');\n  if (out[0] !== 2 || out[1] !== 4) throw new Error('wrong values: ' + JSON.stringify(out));\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "js-myreduce",
+    "title": "Implement Array.prototype.myReduce",
+    "category": "js",
+    "difficulty": "Medium",
+    "description": "## Implement `Array.prototype.myReduce`\n\nAdd a `myReduce` method to `Array.prototype` that behaves like `Array.prototype.reduce`. It takes a callback `(accumulator, currentValue, index, array)` and an optional `initialValue`.\n\nDo not use the built-in `.reduce`.",
+    "starterCode": "Array.prototype.myReduce = function (cb, initialValue) {\n  // your code here\n};\n",
+    "hiddenTestCode": "\ntry {\n  const sum1 = [1, 2, 3].myReduce((a, b) => a + b, 10);\n  if (sum1 !== 16) throw new Error('failed with initial value, got ' + sum1);\n  const sum2 = [1, 2, 3].myReduce((a, b) => a + b);\n  if (sum2 !== 6) throw new Error('failed without initial value, got ' + sum2);\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "js-once",
+    "title": "Implement once",
+    "category": "js",
+    "difficulty": "Easy",
+    "description": "## Implement `once`\n\nWrite a function `once(fn)` that takes a function and returns a new function. The returned function can only be invoked once. Subsequent calls should return the value from the first call.",
+    "starterCode": "function once(fn) {\n  // your code here\n}\n\nmodule.exports = { once };\n",
+    "hiddenTestCode": "\ntry {\n  const { once } = module.exports;\n  let count = 0;\n  const add = once((a, b) => { count++; return a + b; });\n  const res1 = add(2, 3);\n  const res2 = add(5, 5);\n  if (res1 !== 5) throw new Error('first call failed, got ' + res1);\n  if (res2 !== 5) throw new Error('second call did not return cached result, got ' + res2);\n  if (count !== 1) throw new Error('original function was called multiple times');\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "js-sleep",
+    "title": "Implement sleep",
+    "category": "js",
+    "difficulty": "Easy",
+    "description": "## Implement `sleep`\n\nWrite an async function `sleep(ms)` that pauses execution for `ms` milliseconds. It should return a Promise that resolves after the given delay.",
+    "starterCode": "function sleep(ms) {\n  // your code here\n}\n\nmodule.exports = { sleep };\n",
+    "hiddenTestCode": "\n;(async () => {\n  try {\n    const { sleep } = module.exports;\n    const start = Date.now();\n    await sleep(50);\n    const elapsed = Date.now() - start;\n    if (elapsed < 45) throw new Error('resolved too early');\n    console.log('__TEST_PASSED__');\n  } catch (e) {\n    console.log('TEST FAILED:', e.message);\n  }\n})();\n"
+  },
+  {
+    "id": "js-deepclone",
+    "title": "Implement deepClone",
+    "category": "js",
+    "difficulty": "Medium",
+    "description": "## Implement `deepClone`\n\nWrite a function `deepClone(obj)` that creates a deep copy of a given JSON-serializable object. Mutating the clone should not affect the original object.",
+    "starterCode": "function deepClone(obj) {\n  // your code here\n}\n\nmodule.exports = { deepClone };\n",
+    "hiddenTestCode": "\ntry {\n  const { deepClone } = module.exports;\n  const original = { a: 1, b: { c: 2 } };\n  const clone = deepClone(original);\n  if (clone === original) throw new Error('returned same object reference');\n  if (clone.b === original.b) throw new Error('nested object is the same reference');\n  clone.b.c = 99;\n  if (original.b.c !== 2) throw new Error('original object was mutated');\n  if (clone.b.c !== 99) throw new Error('clone was not mutated correctly');\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "js-memoize",
+    "title": "Implement memoize",
+    "category": "js",
+    "difficulty": "Medium",
+    "description": "## Implement `memoize`\n\nWrite a function `memoize(fn)` that returns a memoized version of `fn`. If the function is called with the same arguments, it should return the cached result instead of re-computing.",
+    "starterCode": "function memoize(fn) {\n  // your code here\n}\n\nmodule.exports = { memoize };\n",
+    "hiddenTestCode": "\ntry {\n  const { memoize } = module.exports;\n  let calls = 0;\n  const multiply = memoize((a, b) => { calls++; return a * b; });\n  const r1 = multiply(2, 3);\n  const r2 = multiply(2, 3);\n  const r3 = multiply(4, 5);\n  if (r1 !== 6 || r2 !== 6 || r3 !== 20) throw new Error('returned wrong results');\n  if (calls !== 2) throw new Error('expected 2 computations, got ' + calls);\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "js-chunk",
+    "title": "Implement Array Chunk",
+    "category": "js",
+    "difficulty": "Easy",
+    "description": "## Implement Array Chunk\n\nWrite a function `chunk(array, size)` that splits an array into groups the length of `size`. If the array can't be split evenly, the final chunk will be the remaining elements.",
+    "starterCode": "function chunk(array, size) {\n  // your code here\n}\n\nmodule.exports = { chunk };\n",
+    "hiddenTestCode": "\ntry {\n  const { chunk } = module.exports;\n  const res = chunk([1, 2, 3, 4, 5], 2);\n  if (res.length !== 3) throw new Error('wrong number of chunks');\n  if (res[0][0] !== 1 || res[0][1] !== 2) throw new Error('chunk 1 wrong');\n  if (res[2][0] !== 5 || res[2].length !== 1) throw new Error('final chunk wrong');\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "js-flatten",
+    "title": "Flatten Array",
+    "category": "js",
+    "difficulty": "Medium",
+    "description": "## Flatten Array\n\nWrite a function `flatten(array)` that takes an array of arbitrarily nested arrays and returns a single flat array.",
+    "starterCode": "function flatten(array) {\n  // your code here\n}\n\nmodule.exports = { flatten };\n",
+    "hiddenTestCode": "\ntry {\n  const { flatten } = module.exports;\n  const res = flatten([1, [2, [3, [4]], 5]]);\n  if (!Array.isArray(res)) throw new Error('did not return array');\n  if (res.length !== 5) throw new Error('wrong length, expected 5');\n  if (res.join(',') !== '1,2,3,4,5') throw new Error('failed to flatten deeply');\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "js-mybind",
+    "title": "Implement Function.prototype.myBind",
+    "category": "js",
+    "difficulty": "Medium",
+    "description": "## Implement `Function.prototype.myBind`\n\nAdd a `myBind` method to `Function.prototype` that acts like the native `bind`. It should return a new function that, when called, has its `this` keyword set to the provided value, with a given sequence of arguments preceding any provided when the new function is called.",
+    "starterCode": "Function.prototype.myBind = function (context, ...args) {\n  // your code here\n};\n",
+    "hiddenTestCode": "\ntry {\n  function greet(greeting, punctuation) { return greeting + ' ' + this.name + punctuation; }\n  const person = { name: 'Alice' };\n  const bound = greet.myBind(person, 'Hello');\n  const res = bound('!');\n  if (res !== 'Hello Alice!') throw new Error('failed to bind context and arguments, got: ' + res);\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "js-promise-all",
+    "title": "Implement Promise.all",
+    "category": "js",
+    "difficulty": "Hard",
+    "description": "## Implement `promiseAll`\n\nWrite a function `promiseAll(promises)` that mimics `Promise.all`. It takes an array of Promises and returns a single Promise that resolves to an array of the results. If any promise rejects, the returned promise must reject immediately with that error.",
+    "starterCode": "function promiseAll(promises) {\n  // your code here\n}\n\nmodule.exports = { promiseAll };\n",
+    "hiddenTestCode": "\n;(async () => {\n  try {\n    const { promiseAll } = module.exports;\n    const p1 = Promise.resolve(1);\n    const p2 = new Promise(r => setTimeout(() => r(2), 10));\n    const p3 = 3;\n    const res = await promiseAll([p1, p2, p3]);\n    if (res.join(',') !== '1,2,3') throw new Error('failed to resolve all correctly');\n    let rejected = false;\n    try {\n      await promiseAll([p1, Promise.reject('error')]);\n    } catch (err) {\n      rejected = true;\n      if (err !== 'error') throw new Error('rejected with wrong reason');\n    }\n    if (!rejected) throw new Error('failed to reject');\n    console.log('__TEST_PASSED__');\n  } catch (e) {\n    console.log('TEST FAILED:', e.message);\n  }\n})();\n"
+  },
+  {
+    "id": "js-curry",
+    "title": "Implement curry",
+    "category": "js",
+    "difficulty": "Hard",
+    "description": "## Implement `curry`\n\nWrite a function `curry(fn)` that curries the given function. Currying transforms `fn(a, b, c)` into callable forms like `fn(a)(b)(c)` or `fn(a, b)(c)` until all arguments have been provided.",
+    "starterCode": "function curry(fn) {\n  // your code here\n}\n\nmodule.exports = { curry };\n",
+    "hiddenTestCode": "\ntry {\n  const { curry } = module.exports;\n  const sum = (a, b, c) => a + b + c;\n  const curriedSum = curry(sum);\n  if (curriedSum(1)(2)(3) !== 6) throw new Error('failed on single args');\n  if (curriedSum(1, 2)(3) !== 6) throw new Error('failed on mixed args');\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "js-groupby",
+    "title": "Implement groupBy",
+    "category": "js",
+    "difficulty": "Medium",
+    "description": "## Implement `groupBy`\n\nWrite a function `groupBy(array, keyOrFn)` that groups an array of objects by a specific property name or a grouping function. It returns an object where keys are the grouped values and values are arrays of the original objects.",
+    "starterCode": "function groupBy(array, keyOrFn) {\n  // your code here\n}\n\nmodule.exports = { groupBy };\n",
+    "hiddenTestCode": "\ntry {\n  const { groupBy } = module.exports;\n  const data = [{ id: 1, type: 'A' }, { id: 2, type: 'B' }, { id: 3, type: 'A' }];\n  const res1 = groupBy(data, 'type');\n  if (res1.A.length !== 2 || res1.B.length !== 1) throw new Error('failed grouping by key');\n  const res2 = groupBy([1, 2, 3, 4], x => x % 2 === 0 ? 'even' : 'odd');\n  if (res2.even.length !== 2 || res2.odd.length !== 2) throw new Error('failed grouping by function');\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "js-promiserace",
+    "title": "Implement Promise.race",
+    "category": "js",
+    "difficulty": "Medium",
+    "description": "## Implement `promiseRace`\n\nWrite a function `promiseRace(promises)` that takes an array of Promises and returns a Promise that fulfills or rejects as soon as the first promise in the iterable fulfills or rejects.",
+    "starterCode": "function promiseRace(promises) {\n  // your code here\n}\n\nmodule.exports = { promiseRace };\n",
+    "hiddenTestCode": "\n;(async () => {\n  try {\n    const { promiseRace } = module.exports;\n    const p1 = new Promise(r => setTimeout(() => r('slow'), 50));\n    const p2 = new Promise(r => setTimeout(() => r('fast'), 10));\n    const res = await promiseRace([p1, p2]);\n    if (res !== 'fast') throw new Error('expected fast, got ' + res);\n    console.log('__TEST_PASSED__');\n  } catch (e) {\n    console.log('TEST FAILED:', e.message);\n  }\n})();\n"
+  },
+  {
+    "id": "js-ispalindrome",
+    "title": "Valid Palindrome",
+    "category": "js",
+    "difficulty": "Easy",
+    "description": "## Valid Palindrome\n\nWrite a function `isPalindrome(str)` that checks if a given string is a palindrome (reads the same forwards and backwards). Ignore case and non-alphanumeric characters.",
+    "starterCode": "function isPalindrome(str) {\n  // your code here\n}\n\nmodule.exports = { isPalindrome };\n",
+    "hiddenTestCode": "\ntry {\n  const { isPalindrome } = module.exports;\n  if (isPalindrome('A man, a plan, a canal: Panama') !== true) throw new Error('failed on valid complex palindrome');\n  if (isPalindrome('race a car') !== false) throw new Error('failed on invalid palindrome');\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "js-objectmap",
+    "title": "Object Map",
+    "category": "js",
+    "difficulty": "Easy",
+    "description": "## Object Map\n\nWrite a function `objectMap(obj, fn)` that takes an object and a callback function. It should return a new object with the same keys, but the values are the result of passing the original value to the callback.",
+    "starterCode": "function objectMap(obj, fn) {\n  // your code here\n}\n\nmodule.exports = { objectMap };\n",
+    "hiddenTestCode": "\ntry {\n  const { objectMap } = module.exports;\n  const obj = { a: 1, b: 2, c: 3 };\n  const res = objectMap(obj, x => x * 2);\n  if (res.a !== 2 || res.b !== 4 || res.c !== 6) throw new Error('failed to map values');\n  if (Object.keys(res).length !== 3) throw new Error('wrong number of keys');\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "js-uniquearray",
+    "title": "Unique Array",
+    "category": "js",
+    "difficulty": "Easy",
+    "description": "## Unique Array\n\nWrite a function `unique(array)` that takes an array of primitive values and returns a new array with all duplicates removed. Do not use `Array.from(new Set(array))` if you want a challenge!",
+    "starterCode": "function unique(array) {\n  // your code here\n}\n\nmodule.exports = { unique };\n",
+    "hiddenTestCode": "\ntry {\n  const { unique } = module.exports;\n  const res = unique([1, 1, 2, 3, 3, 4, 1]);\n  if (res.length !== 4) throw new Error('failed to remove all duplicates');\n  if (res.join(',') !== '1,2,3,4') throw new Error('wrong output array');\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  },
+  {
+    "id": "js-delay",
+    "title": "Delay Execution",
+    "category": "js",
+    "difficulty": "Easy",
+    "description": "## Delay Execution\n\nWrite a function `delay(fn, wait)` that executes a given function `fn` after `wait` milliseconds. Pass any additional arguments provided to `delay` into the `fn`.",
+    "starterCode": "function delay(fn, wait, ...args) {\n  // your code here\n}\n\nmodule.exports = { delay };\n",
+    "hiddenTestCode": "\n;(async () => {\n  try {\n    const { delay } = module.exports;\n    let val = 0;\n    delay((a, b) => { val = a + b; }, 20, 5, 10);\n    if (val !== 0) throw new Error('function executed too early');\n    await new Promise(r => setTimeout(r, 40));\n    if (val !== 15) throw new Error('function did not execute correctly with arguments');\n    console.log('__TEST_PASSED__');\n  } catch (e) {\n    console.log('TEST FAILED:', e.message);\n  }\n})();\n"
+  },
+  {
+    "id": "js-countby",
+    "title": "Count By",
+    "category": "js",
+    "difficulty": "Medium",
+    "description": "## Count By\n\nWrite a function `countBy(array, iteratee)` that counts the occurrences of values returned from the iteratee function. Returns an object mapping the keys to the number of times they appeared.",
+    "starterCode": "function countBy(array, iteratee) {\n  // your code here\n}\n\nmodule.exports = { countBy };\n",
+    "hiddenTestCode": "\ntry {\n  const { countBy } = module.exports;\n  const res = countBy([6.1, 4.2, 6.3], Math.floor);\n  if (res['4'] !== 1) throw new Error('expected key 4 to have count 1');\n  if (res['6'] !== 2) throw new Error('expected key 6 to have count 2');\n  console.log('__TEST_PASSED__');\n} catch (e) {\n  console.log('TEST FAILED:', e.message);\n}\n"
+  }
+]

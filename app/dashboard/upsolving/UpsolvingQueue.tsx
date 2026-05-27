@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Icon } from "../../_ui/icons";
 
 type Difficulty = "EASY" | "MEDIUM" | "HARD";
 
@@ -20,10 +21,10 @@ interface Props {
   items: UpsolvingItem[];
 }
 
-const difficultyStyle: Record<Difficulty, string> = {
-  EASY: "text-green-400 bg-green-400/10",
-  MEDIUM: "text-yellow-400 bg-yellow-400/10",
-  HARD: "text-red-400 bg-red-400/10",
+const diffLetter: Record<Difficulty, "E" | "M" | "H"> = {
+  EASY: "E",
+  MEDIUM: "M",
+  HARD: "H",
 };
 
 function formatDate(iso: string) {
@@ -139,7 +140,7 @@ export default function UpsolvingQueue({ items: initialItems }: Props) {
         body: JSON.stringify({ itemId }),
       });
     } catch {
-      // optimistic — failure is silent; next refresh will restore if needed
+      // optimistic
     } finally {
       setMarkingDone(null);
     }
@@ -148,114 +149,130 @@ export default function UpsolvingQueue({ items: initialItems }: Props) {
   const groups = groupByContest(items);
 
   return (
-    <div className="space-y-6">
+    <div style={{ maxWidth: 760 }}>
       {/* Header actions */}
-      <div className="flex items-center justify-between">
-        <p className="text-xs text-[#737373]">
-          {items.length > 0 ? `${items.length} problem${items.length !== 1 ? "s" : ""} to upsolve` : "Queue empty"}
-        </p>
-        <div className="flex items-center gap-2">
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 18 }}>
+        <div style={{ color: "var(--rc-mute)", fontSize: 13 }}>
+          <span style={{ color: "var(--rc-ink)", fontWeight: 500, fontFeatureSettings: '"tnum"' }}>{items.length}</span>{" "}
+          {items.length === 1 ? "problem" : "problems"} to upsolve
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
           <button
             onClick={handleReset}
             disabled={resetting || items.length === 0}
-            className="px-3 py-2 rounded-xl border border-[#2f2f2f] hover:border-red-500/40 disabled:opacity-40 disabled:cursor-not-allowed text-xs text-[#737373] hover:text-red-400 transition-colors"
+            className="aa-btn aa-btn-danger aa-btn-sm"
           >
             {resetting ? "Resetting…" : "Reset"}
           </button>
           <button
             onClick={handleRefresh}
             disabled={refreshing}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium transition-colors"
+            className="aa-btn aa-btn-primary aa-btn-sm"
           >
             {refreshing ? (
-              <>
-                <span className="w-3.5 h-3.5 border border-white/40 border-t-white rounded-full animate-spin" />
-                Refreshing…
-              </>
+              <><span className="aa-spin" /> Refreshing…</>
             ) : (
-              "Refresh from LeetCode"
+              <>{Icon.refresh()} Refresh from LeetCode</>
             )}
           </button>
         </div>
       </div>
 
-      {/* Manual contest entry */}
-      <div className="flex gap-2">
-        <input
-          type="text"
-          value={contestInput}
-          onChange={(e) => setContestInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleAddContest()}
-          placeholder="Add a contest manually, e.g. weekly-contest-451"
-          className="flex-1 px-4 py-2 rounded-xl bg-[#0d0d0d] border border-[#2f2f2f] text-white text-sm placeholder:text-[#4a4a4a] focus:outline-none focus:border-indigo-500 transition-colors"
-        />
+      {/* Manual add */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 18 }}>
+        <div
+          style={{
+            flex: 1,
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "0 12px",
+            border: "1px solid var(--rc-hairline)",
+            background: "var(--rc-surface-elevated)",
+            borderRadius: 8,
+            height: 38,
+          }}
+        >
+          <span style={{ color: "var(--rc-ash)" }}>{Icon.plus()}</span>
+          <input
+            value={contestInput}
+            onChange={(e) => setContestInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleAddContest()}
+            placeholder="Add a contest manually, e.g. weekly-contest-451"
+            style={{
+              flex: 1,
+              background: "transparent",
+              border: 0,
+              color: "var(--rc-ink)",
+              outline: "none",
+              fontFamily: "inherit",
+              fontSize: 13,
+            }}
+          />
+        </div>
         <button
           onClick={handleAddContest}
           disabled={adding || !contestInput.trim()}
-          className="px-4 py-2 rounded-xl border border-[#2f2f2f] hover:border-indigo-500 text-sm text-[#a3a3a3] hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+          className="aa-btn aa-btn-tertiary aa-btn-sm"
         >
-          {adding ? <span className="w-3.5 h-3.5 border border-[#737373] border-t-white rounded-full animate-spin" /> : null}
+          {adding ? <span className="aa-spin" /> : null}
           {adding ? "Adding…" : "Add"}
         </button>
       </div>
 
-      {/* Toast */}
       {toast && (
-        <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/5 px-4 py-3">
-          <p className="text-xs text-indigo-300">{toast}</p>
+        <div className="aa-banner info" style={{ marginBottom: 18 }}>
+          {toast}
         </div>
       )}
 
       {/* Empty state */}
       {items.length === 0 && (
-        <div className="rounded-2xl border border-[#1f1f1f] bg-[#111111] p-10 flex flex-col items-center gap-3 text-center">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#4a4a4a" strokeWidth="1.5">
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
-          <p className="text-sm font-semibold text-white">You&apos;re all caught up</p>
-          <p className="text-xs text-[#737373] max-w-xs">
+        <div className="aa-card" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, padding: 40, textAlign: "center" }}>
+          <div className="aa-feature-icon green" style={{ width: 40, height: 40 }}>{Icon.check()}</div>
+          <p style={{ margin: 0, color: "var(--rc-ink)", fontWeight: 500, fontSize: 14 }}>You&apos;re all caught up</p>
+          <p style={{ margin: 0, color: "var(--rc-on-dark-mute)", fontSize: 13, maxWidth: 320 }}>
             No unsolved contest problems found. Click Refresh to pull your latest contest history.
           </p>
         </div>
       )}
 
       {/* Contest groups */}
-      {groups.map((group) => (
-        <div key={group.contestTitle} className="rounded-2xl border border-[#1f1f1f] bg-[#111111] overflow-hidden">
-          <div className="px-5 py-3 border-b border-[#1f1f1f] flex items-center justify-between">
-            <p className="text-sm font-semibold text-white">{group.contestTitle}</p>
-            <p className="text-xs text-[#4a4a4a]">{formatDate(group.contestDate)}</p>
-          </div>
-          <div className="divide-y divide-[#1a1a1a]">
-            {group.items.map((item) => (
-              <div key={item.id} className="px-5 py-3.5 flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3 min-w-0">
-                  <span
-                    className={`flex-shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded ${difficultyStyle[item.question.difficulty]}`}
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {groups.map((group) => (
+          <div key={group.contestTitle} className="aa-q-group">
+            <div className="aa-q-head">
+              <div className="name">{group.contestTitle}</div>
+              <div className="date">{formatDate(group.contestDate)}</div>
+            </div>
+            {group.items.map((item) => {
+              const letter = diffLetter[item.question.difficulty];
+              const isMarking = markingDone === item.id;
+              return (
+                <div key={item.id} className="aa-q-row">
+                  <span className={"aa-diff " + letter}>{letter}</span>
+                  <div className="title">
+                    <a
+                      href={`https://leetcode.com/problems/${item.question.slug}/`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {item.question.title}
+                    </a>
+                  </div>
+                  <button
+                    onClick={() => handleMarkDone(item.id)}
+                    disabled={isMarking}
+                    className="aa-btn aa-btn-tertiary aa-btn-sm"
                   >
-                    {item.question.difficulty[0]}
-                  </span>
-                  <a
-                    href={`https://leetcode.com/problems/${item.question.slug}/`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm text-[#e5e5e5] hover:text-indigo-400 transition-colors truncate"
-                  >
-                    {item.question.title}
-                  </a>
+                    {isMarking ? "…" : "Mark done"}
+                  </button>
                 </div>
-                <button
-                  onClick={() => handleMarkDone(item.id)}
-                  disabled={markingDone === item.id}
-                  className="flex-shrink-0 text-xs text-[#737373] hover:text-green-400 border border-[#2f2f2f] hover:border-green-500/40 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-40"
-                >
-                  {markingDone === item.id ? "…" : "Mark Done"}
-                </button>
-              </div>
-            ))}
+              );
+            })}
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   );
 }
